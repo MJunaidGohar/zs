@@ -1,0 +1,64 @@
+
+
+name: ZaroriSawal
+description: >
+  Zaroori Sawal is an educational app designed specifically for Pakistani students
+  from Classes 9 to 12. It helps you prepare for board exams by offering important
+  MCQs and short questions, all organized by subject and chapter.
+
+  🎯 Key Features:
+  • Objective-type MCQs and short questions
+  • Learn or Test mode for each unit
+  • Class-wise and subject-wise selection
+  • Dark mode for comfortable reading
+  • Retry incorrect tests
+  • Score tracking & avatar customization
+  • Daily study reminders and points system
+  • Works offline – No login needed!
+  • Ads only appear during test sessions
+
+#publish_to: "none"
+#
+#version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.5.3          # Latest stable
+  cupertino_icons: ^1.0.8
+  provider: ^6.1.2                    # Updated stable version
+  intl: ^0.20.0                       # Already latest
+  connectivity_plus: ^6.1.5           # For Network
+  hive: ^2.2.3  # --- Hive packages for offline storage ---
+  hive_flutter: ^1.1.0
+  http: ^1.2.2 #network
+  path_provider: ^2.1.5
+  flutter_local_notifications: ^19.4.2
+  timezone: ^0.10.1
+  uuid: ^4.5.1
+  permission_handler: ^12.0.1 # Storage permissions
+  google_mobile_ads: ^6.0.0           # Updated for AdMob (required by Play Store)
+  confetti: ^0.6.0
+ # permission_handler: ^11.5.0 # Storage permissions
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/avatar/boy_avatar.png
+    - assets/avatar/girl_avatar.png
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/zs-logo.png"
+  min_sdk_android: 24
