@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # zarori_sawal
 
 A new Flutter project.
@@ -14,3 +15,7 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+=======
+# zs
+This is an educational App
+>>>>>>> fa4c473545e0b58b730a68d6d2acda6f66b41594
