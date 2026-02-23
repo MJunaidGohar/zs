@@ -1,0 +1,57 @@
+[
+  {
+    "topic": "English",
+    "level": "Intermediate",
+    "subtopic": "Writing",
+    "q": "How can you express ideas clearly while writing?",
+    "option_a": "Use simple structure and correct words.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  },
+  {
+    "topic": "English",
+    "level": "Intermediate",
+    "subtopic": "Writing",
+    "q": "How do you improve accuracy in writing?",
+    "option_a": "Practice and correct mistakes.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  },
+  {
+    "topic": "English",
+    "level": "Intermediate",
+    "subtopic": "Writing",
+    "q": "What helps confidence in writing?",
+    "option_a": "Regular speaking or practice.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  },
+  {
+    "topic": "English",
+    "level": "Intermediate",
+    "subtopic": "Writing",
+    "q": "Why is feedback important in writing?",
+    "option_a": "It helps identify mistakes.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  },
+  {
+    "topic": "English",
+    "level": "Intermediate",
+    "subtopic": "Writing",
+    "q": "How can you expand skills in writing?",
+    "option_a": "Learn new words and techniques.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  }
+]

@@ -1,0 +1,57 @@
+[
+  {
+    "topic": "English",
+    "level": "Advanced",
+    "subtopic": "Learning",
+    "q": "How do you maintain clarity in advanced learning?",
+    "option_a": "Organize ideas logically.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  },
+  {
+    "topic": "English",
+    "level": "Advanced",
+    "subtopic": "Learning",
+    "q": "How can tone improve learning?",
+    "option_a": "Use appropriate tone and pace.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  },
+  {
+    "topic": "English",
+    "level": "Advanced",
+    "subtopic": "Learning",
+    "q": "What role does structure play in learning?",
+    "option_a": "It improves understanding.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  },
+  {
+    "topic": "English",
+    "level": "Advanced",
+    "subtopic": "Learning",
+    "q": "How do you reduce errors in learning?",
+    "option_a": "Review and self-correct.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  },
+  {
+    "topic": "English",
+    "level": "Advanced",
+    "subtopic": "Learning",
+    "q": "How can you sound professional in learning?",
+    "option_a": "Use formal and precise language.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  }
+]

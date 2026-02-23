@@ -1,0 +1,57 @@
+[
+  {
+    "topic": "Web Development",
+    "level": "Intermediate",
+    "subtopic": "WordPress",
+    "q": "What is the purpose of WordPress?",
+    "option_a": "It explains the main use of WordPress.",
+    "option_b": "Ignore best practices",
+    "option_c": "Avoid learning basics",
+    "option_d": "Use random methods",
+    "correct_option": "A"
+  },
+  {
+    "topic": "Web Development",
+    "level": "Intermediate",
+    "subtopic": "WordPress",
+    "q": "Why is WordPress important at intermediate level?",
+    "option_a": "It helps improve results at intermediate level.",
+    "option_b": "Ignore best practices",
+    "option_c": "Avoid learning basics",
+    "option_d": "Use random methods",
+    "correct_option": "A"
+  },
+  {
+    "topic": "Web Development",
+    "level": "Intermediate",
+    "subtopic": "WordPress",
+    "q": "What is a key practice tip for WordPress?",
+    "option_a": "Use consistent and correct methods.",
+    "option_b": "Ignore best practices",
+    "option_c": "Avoid learning basics",
+    "option_d": "Use random methods",
+    "correct_option": "A"
+  },
+  {
+    "topic": "Web Development",
+    "level": "Intermediate",
+    "subtopic": "WordPress",
+    "q": "What mistake should you avoid in WordPress?",
+    "option_a": "Avoid skipping basics.",
+    "option_b": "Ignore best practices",
+    "option_c": "Avoid learning basics",
+    "option_d": "Use random methods",
+    "correct_option": "A"
+  },
+  {
+    "topic": "Web Development",
+    "level": "Intermediate",
+    "subtopic": "WordPress",
+    "q": "How can you improve WordPress skills?",
+    "option_a": "Practice and review regularly.",
+    "option_b": "Ignore best practices",
+    "option_c": "Avoid learning basics",
+    "option_d": "Use random methods",
+    "correct_option": "A"
+  }
+]

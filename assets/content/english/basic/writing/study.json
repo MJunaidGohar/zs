@@ -1,0 +1,37 @@
+[
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Writing",
+    "question": "What is a simple sentence?",
+    "answer": "A sentence with subject and verb."
+  },
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Writing",
+    "question": "How do you start a sentence?",
+    "answer": "With a capital letter."
+  },
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Writing",
+    "question": "How do you end a sentence?",
+    "answer": "With a full stop."
+  },
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Writing",
+    "question": "Why is spelling important?",
+    "answer": "It makes writing clear."
+  },
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Writing",
+    "question": "What is basic writing practice?",
+    "answer": "Writing short sentences."
+  }
+]

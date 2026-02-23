@@ -1,0 +1,57 @@
+[
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Speaking",
+    "q": "How do you greet someone politely?",
+    "option_a": "Say Hello or Good morning.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  },
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Speaking",
+    "q": "How do you introduce yourself?",
+    "option_a": "Say your name clearly.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  },
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Speaking",
+    "q": "How do you ask for help?",
+    "option_a": "Say Can you help me please?",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  },
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Speaking",
+    "q": "How do you say thank you?",
+    "option_a": "Say Thank you.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  },
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Speaking",
+    "q": "How do you say sorry?",
+    "option_a": "Say I am sorry.",
+    "option_b": "Ignore structure and rules",
+    "option_c": "Avoid feedback and review",
+    "option_d": "Rely only on guessing",
+    "correct_option": "A"
+  }
+]

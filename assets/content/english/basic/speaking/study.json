@@ -1,0 +1,37 @@
+[
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Speaking",
+    "question": "How do you greet someone politely?",
+    "answer": "Say Hello or Good morning."
+  },
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Speaking",
+    "question": "How do you introduce yourself?",
+    "answer": "Say your name clearly."
+  },
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Speaking",
+    "question": "How do you ask for help?",
+    "answer": "Say Can you help me please?"
+  },
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Speaking",
+    "question": "How do you say thank you?",
+    "answer": "Say Thank you."
+  },
+  {
+    "topic": "English",
+    "level": "Basic",
+    "subtopic": "Speaking",
+    "question": "How do you say sorry?",
+    "answer": "Say I am sorry."
+  }
+]

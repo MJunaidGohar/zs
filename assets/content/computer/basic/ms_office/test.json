@@ -1,0 +1,37 @@
+[
+  {
+    "topic": "Computer",
+    "level": "Basic",
+    "subtopic": "MS Office",
+    "question": "What is the purpose of MS Office?",
+    "answer": "It explains the main use of MS Office."
+  },
+  {
+    "topic": "Computer",
+    "level": "Basic",
+    "subtopic": "MS Office",
+    "question": "Why is MS Office important at basic level?",
+    "answer": "It helps improve results at basic level."
+  },
+  {
+    "topic": "Computer",
+    "level": "Basic",
+    "subtopic": "MS Office",
+    "question": "What is a key practice tip for MS Office?",
+    "answer": "Use consistent and correct methods."
+  },
+  {
+    "topic": "Computer",
+    "level": "Basic",
+    "subtopic": "MS Office",
+    "question": "What mistake should you avoid in MS Office?",
+    "answer": "Avoid skipping basics."
+  },
+  {
+    "topic": "Computer",
+    "level": "Basic",
+    "subtopic": "MS Office",
+    "question": "How can you improve MS Office skills?",
+    "answer": "Practice and review regularly."
+  }
+]

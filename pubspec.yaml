@@ -1,0 +1,67 @@
+name: zarori_sawal
+description: >
+  Zaroori Sawal - Learn Skills & Play Match-3 Game!
+
+  Master English, Computer, Digital Marketing, Web Development & YouTube 
+  with structured Topic → Level → Subtopic learning. Study Mode + Test Mode 
+  with MCQs, progress tracking, offline access, dark mode & avatars.
+
+  Bonus: Fun match-3 puzzle game with fruit/emoji themes, background music, 
+  combo system & haptic feedback. Learn, play & relax—all offline & free!
+
+#publish_to: "none"
+#
+#version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.5.3          # Latest stable
+  cupertino_icons: ^1.0.8
+  provider: ^6.1.2                    # Updated stable version
+  intl: ^0.20.0                       # Already latest
+  connectivity_plus: ^6.1.5           # For Network
+  hive: ^2.2.3  # --- Hive packages for offline storage ---
+  hive_flutter: ^1.1.0
+  http: ^1.6.0 #network
+  path_provider: ^2.1.5
+  screenshot: ^3.0.0                 # For capturing result screen
+  share_plus: ^10.0.0               # For sharing screenshot to any platform
+  image: ^4.5.2                    # For image processing to embed Play Store link
+  flutter_local_notifications: ^19.4.2
+  timezone: ^0.10.1
+  flutter_timezone: ^4.1.0
+  uuid: ^4.5.1
+  permission_handler: ^12.0.1 # Storage permissions
+  google_mobile_ads: ^6.0.0           # Updated for AdMob (required by Play Store)
+  confetti: ^0.6.0
+  youtube_player_flutter: ^9.1.1    # For embedded YouTube video playback
+  vibration: ^3.1.3                  # For haptic feedback on score milestones
+  audioplayers: ^6.1.0              # For background music
+  volume_controller: ^2.0.8         # For hardware volume button control
+  file_picker: ^8.0.0+1             # For selecting custom audio files
+ # permission_handler: ^11.5.0 # Storage permissions
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/avatar/
+    - assets/icon/
+    - assets/content/
+    - assets/audio/
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/zs-logo.png"
+  min_sdk_android: 24

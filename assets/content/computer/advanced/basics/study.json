@@ -1,0 +1,37 @@
+[
+  {
+    "topic": "Computer",
+    "level": "Advanced",
+    "subtopic": "Basics",
+    "question": "What is the purpose of Basics?",
+    "answer": "It explains the main use of Basics."
+  },
+  {
+    "topic": "Computer",
+    "level": "Advanced",
+    "subtopic": "Basics",
+    "question": "Why is Basics important at advanced level?",
+    "answer": "It helps improve results at advanced level."
+  },
+  {
+    "topic": "Computer",
+    "level": "Advanced",
+    "subtopic": "Basics",
+    "question": "What is a key practice tip for Basics?",
+    "answer": "Use consistent and correct methods."
+  },
+  {
+    "topic": "Computer",
+    "level": "Advanced",
+    "subtopic": "Basics",
+    "question": "What mistake should you avoid in Basics?",
+    "answer": "Avoid skipping basics."
+  },
+  {
+    "topic": "Computer",
+    "level": "Advanced",
+    "subtopic": "Basics",
+    "question": "How can you improve Basics skills?",
+    "answer": "Practice and review regularly."
+  }
+]
