@@ -3,6 +3,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../services/admob_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:confetti/confetti.dart';
 import 'package:screenshot/screenshot.dart';
@@ -88,24 +89,21 @@ class _ResultScreenState extends State<ResultScreen>
       widget.total > 0 ? (widget.score / widget.total) * 100 : 0.0;
 
   void _loadInterstitialAd() {
-    InterstitialAd.load(
+    AdMobService.loadInterstitialAd(
       adUnitId: 'ca-app-pub-5721278995377651/6519657994',
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          _interstitialAd = ad;
-          _interstitialAd!.show();
-        },
-        onAdFailedToLoad: (error) {
-          debugPrint('Interstitial Ad failed to load: $error');
-        },
-      ),
+      onAdLoaded: (ad) {
+        _interstitialAd = ad;
+        _interstitialAd!.show();
+      },
+      onAdFailedToLoad: (error) {
+        debugPrint('Interstitial Ad failed to load: $error');
+      },
     );
   }
 
   @override
   void dispose() {
-    _interstitialAd?.dispose();
+    AdMobService.disposeInterstitialAd(_interstitialAd);
     _confettiController.dispose();
     _animationController.dispose();
     super.dispose();
@@ -116,17 +114,17 @@ class _ResultScreenState extends State<ResultScreen>
     final displayName = userName == 'Learner' ? 'I' : userName;
     final messages = [
       if (isSuccess) ...[
-        "🎉 $displayName just scored ${widget.score}/${widget.total} (${percentage.toInt()}%) on Zaroori Sawal! Can you beat this score? Download now! $_playStoreUrl",
+        "🎉 $displayName just scored ${widget.score}/${widget.total} (${percentage.toInt()}%) on Zarori Sawal! Can you beat this score? Download to check your ability $_playStoreUrl",
         "🔥 $displayName nailed it! ${percentage.toInt()}% correct in ${widget.selectedLevel}! Challenge yourself with Zaroori Sawal! $_playStoreUrl",
         "🏆 $displayName is on fire! ${widget.score} correct answers! Join on Zaroori Sawal - Learn & Play! $_playStoreUrl",
-        "✨ Amazing result by $displayName! ${percentage.toInt()}% accuracy! Think you can do better? Try Zaroori Sawal! $_playStoreUrl",
-        "🚀 $displayName is crushing learning goals with ${percentage.toInt()}%! Download Zaroori Sawal and let's compete! $_playStoreUrl",
+        "✨ Amazing result by $displayName! ${percentage.toInt()}% accuracy! Think you can do better? $_playStoreUrl",
+        "🚀 $displayName is crushing learning goals with ${percentage.toInt()}%! Download Zarori Sawal and let's compete! $_playStoreUrl",
       ] else ...[
-        "💪 $displayName is on a learning journey! Scored ${widget.score}/${widget.total} on Zaroori Sawal. Let's learn together! $_playStoreUrl",
-        "📚 Practice makes perfect! $displayName scored ${percentage.toInt()}% on ${widget.selectedLevel}. Join on Zaroori Sawal! $_playStoreUrl",
+        "💪 $displayName is on a learning journey! Scored ${widget.score}/${widget.total} on Zarori Sawal. Let's learn together! $_playStoreUrl",
+        "📚 Practice makes perfect! $displayName scored ${percentage.toInt()}% on ${widget.selectedLevel}. Join on Zarori Sawal! $_playStoreUrl",
         "🎯 Every attempt counts! $displayName got ${widget.score} correct this time. Learning with Zaroori Sawal! $_playStoreUrl",
-        "🌟 $displayName is getting better every day! Try Zaroori Sawal and track your progress too! $_playStoreUrl",
-        "📝 Learning mode: ON for $displayName! Scored ${percentage.toInt()}% today. Download Zaroori Sawal! $_playStoreUrl",
+        "🌟 $displayName is getting better every day! Try Zarori Sawal and track your progress too! $_playStoreUrl",
+        "📝 Learning mode: ON for $displayName! Scored ${percentage.toInt()}% today. Download Zarori Sawal! $_playStoreUrl",
       ]
     ];
     // Use score + date as seed for consistent but varied selection
@@ -177,7 +175,7 @@ class _ResultScreenState extends State<ResultScreen>
       await Share.shareXFiles(
         [xFile],
         text: message,
-        subject: 'My Zaroori Sawal Result!',
+        subject: 'My Zarori Sawal Result!',
       );
     } catch (e) {
       _showShareError('Unable to share. Please try again.');
@@ -217,7 +215,7 @@ class _ResultScreenState extends State<ResultScreen>
       // App name
       img.drawString(
         newImage,
-        'Zaroori Sawal - Learn & Play',
+        'Zarori Sawal - Learn & Play',
         font: img.arial24,
         x: (original.width ~/ 2) - 120,
         y: textY,
@@ -227,7 +225,7 @@ class _ResultScreenState extends State<ResultScreen>
       // Download message
       img.drawString(
         newImage,
-        'Download the app:',
+        'Download the free app:',
         font: img.arial14,
         x: (original.width ~/ 2) - 70,
         y: textY + 35,

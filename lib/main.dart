@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 
 // Services
 import 'services/hive_service.dart';
 import 'services/question_service.dart';
 import 'services/notification_service.dart';
+import 'services/floating_button_service.dart';
+import 'services/chat_quota_service.dart';
+import 'services/admob_service.dart';
 
 // Providers
 import 'providers/user_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/chat_provider.dart';
 
 // Screens
 import 'screens/onboarding_screen.dart';
@@ -21,8 +27,8 @@ import 'screens/profile_screen.dart';
 // Theme
 import 'utils/app_theme.dart';
 
-// Google AdMob
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+// Chat Widgets
+import 'widgets/global_chat_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,19 +64,29 @@ void main() async {
   final questionService = QuestionService();
   await questionService.seedQuestions();
 
+  // Initialize chat services
+  final floatingButtonService = FloatingButtonService();
+  await floatingButtonService.init();
+  
+  final chatQuotaService = ChatQuotaService();
+  await chatQuotaService.init();
+  
   // Initialize Providers
   final userProvider = UserProvider();
   await userProvider.loadUserData();
   final themeProvider = ThemeProvider();
+  final chatProvider = ChatProvider();
+  await chatProvider.init();
 
-  // AdMob
-  await MobileAds.instance.initialize();
+  // AdMob - uses platform-aware service
+  await AdMobService.initialize();
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => userProvider),
         ChangeNotifierProvider(create: (_) => themeProvider),
+        ChangeNotifierProvider(create: (_) => chatProvider),
       ],
       child: const MyApp(),
     ),
@@ -100,11 +116,17 @@ class MyApp extends StatelessWidget {
       );
     }
 
-    // Determine start screen
-    final Widget startScreen =
+    // Determine start screen route
+    final String initialRoute =
         (userProvider.userName == null || userProvider.userName!.isEmpty)
-            ? const OnboardingScreen()
-            : const MainSelectionScreen();
+            ? '/onboarding'
+            : '/mainSelection';
+
+    // Route observer for hiding chat button on certain screens
+    final showButtonNotifier = ValueNotifier<bool>(initialRoute != '/onboarding');
+    final chatButtonObserver = ChatButtonRouteObserver(
+      showButtonNotifier: showButtonNotifier,
+    );
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -112,13 +134,29 @@ class MyApp extends StatelessWidget {
       theme: _buildLightTheme(),
       darkTheme: _buildDarkTheme(),
       themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      navigatorObservers: [chatButtonObserver],
+      initialRoute: initialRoute,
       routes: {
         '/onboarding': (_) => const OnboardingScreen(),
         '/mainSelection': (_) => const MainSelectionScreen(),
         '/avatarSelection': (_) => const AvatarSelectionScreen(),
         '/profile': (_) => const ProfileScreen(),
       },
-      home: startScreen,
+      builder: (context, child) {
+        return Directionality(
+          textDirection: TextDirection.ltr,
+          child: Overlay(
+            initialEntries: [
+              OverlayEntry(
+                builder: (context) => GlobalChatOverlay(
+                  showButtonNotifier: showButtonNotifier,
+                  child: child!,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

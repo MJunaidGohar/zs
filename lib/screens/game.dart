@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:io';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import '../services/admob_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
@@ -447,31 +448,28 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   // ------------------- AD HELPERS -------------------
   void _loadAd() {
     if (_adShown) return;
-    InterstitialAd.load(
+    AdMobService.loadInterstitialAd(
       adUnitId: 'ca-app-pub-5721278995377651/6519657994',
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          _interstitialAd = ad;
-          try {
-            ad.show();
-            _adShown = true;
-          } catch (e) {
-            developer.log('Failed to show interstitial ad: $e');
-          }
-          ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) => ad.dispose(),
-            onAdFailedToShowFullScreenContent: (ad, err) {
-              developer.log('Interstitial ad failed to show: ${err.message}');
-              ad.dispose();
-            },
-          );
-        },
-        onAdFailedToLoad: (err) {
-          developer.log('Interstitial ad failed to load: ${err.message}');
-          _interstitialAd = null;
-        },
-      ),
+      onAdLoaded: (ad) {
+        _interstitialAd = ad;
+        try {
+          ad.show();
+          _adShown = true;
+        } catch (e) {
+          developer.log('Failed to show interstitial ad: $e');
+        }
+        ad.fullScreenContentCallback = FullScreenContentCallback(
+          onAdDismissedFullScreenContent: (ad) => ad.dispose(),
+          onAdFailedToShowFullScreenContent: (ad, err) {
+            developer.log('Interstitial ad failed to show: ${err.message}');
+            ad.dispose();
+          },
+        );
+      },
+      onAdFailedToLoad: (err) {
+        developer.log('Interstitial ad failed to load: ${err.message}');
+        _interstitialAd = null;
+      },
     );
   }
 
@@ -1696,7 +1694,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _handSwipeController.dispose();
     _backgroundController.dispose();
     _particleController.dispose();
-    _interstitialAd?.dispose();
+    AdMobService.disposeInterstitialAd(_interstitialAd);
     scoreNotifier.dispose();
     _volumeController.removeListener();
     _disposeAudioPlayer();

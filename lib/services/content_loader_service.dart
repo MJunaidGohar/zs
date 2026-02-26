@@ -80,14 +80,14 @@ class ContentLoaderService {
 
     // Try JSON first (fastest, production format)
     final jsonPath = 'assets/content/$normalizedTopic/$normalizedLevel/$normalizedSubtopic/$type.json';
-    final jsonQuestions = await _tryLoadJson(jsonPath);
+    final jsonQuestions = await _tryLoadJson(jsonPath, topic: topic, level: level, subtopic: subtopic);
     if (jsonQuestions != null && jsonQuestions.isNotEmpty) {
       return jsonQuestions;
     }
 
     // Fallback: try CSV format (development/editing format)
     final csvPath = 'assets/content/$normalizedTopic/$normalizedLevel/$normalizedSubtopic/$type.csv';
-    final csvQuestions = await _tryLoadCsv(csvPath);
+    final csvQuestions = await _tryLoadCsv(csvPath, topic: topic, level: level, subtopic: subtopic);
     if (csvQuestions != null && csvQuestions.isNotEmpty) {
       return csvQuestions;
     }
@@ -117,13 +117,31 @@ class ContentLoaderService {
     return [];
   }
 
-  /// Try to load questions from JSON asset
-  Future<List<Question>?> _tryLoadJson(String assetPath) async {
+  /// Try to load questions from JSON asset with metadata
+  Future<List<Question>?> _tryLoadJson(
+    String assetPath, {
+    required String topic,
+    required String level,
+    required String subtopic,
+  }) async {
     try {
       final jsonString = await rootBundle.loadString(assetPath);
       final jsonList = jsonDecode(jsonString) as List<dynamic>;
       return jsonList
-          .map((json) => Question.fromJson(json as Map<String, dynamic>))
+          .map((json) {
+            final q = Question.fromJson(json as Map<String, dynamic>);
+            // Set metadata fields if not present in JSON
+            return Question(
+              id: q.id,
+              questionText: q.questionText,
+              options: q.options,
+              correctAnswer: q.correctAnswer,
+              answer: q.answer,
+              topic: q.topic ?? topic,
+              level: q.level ?? level,
+              subtopic: q.subtopic ?? subtopic,
+            );
+          })
           .where((q) => q.questionText.isNotEmpty)
           .toList();
     } catch (_) {
@@ -131,8 +149,13 @@ class ContentLoaderService {
     }
   }
 
-  /// Try to load questions from CSV asset
-  Future<List<Question>?> _tryLoadCsv(String assetPath) async {
+  /// Try to load questions from CSV asset with metadata
+  Future<List<Question>?> _tryLoadCsv(
+    String assetPath, {
+    required String topic,
+    required String level,
+    required String subtopic,
+  }) async {
     try {
       final csvString = await rootBundle.loadString(assetPath);
       final lines = csvString.split('\n');
@@ -155,7 +178,7 @@ class ContentLoaderService {
           }
         }
 
-        final question = _questionFromMap(map);
+        final question = _questionFromMap(map, topic: topic, level: level, subtopic: subtopic);
         if (question.questionText.isNotEmpty) {
           questions.add(question);
         }
@@ -196,8 +219,13 @@ class ContentLoaderService {
     return result;
   }
 
-  /// Create Question from map (CSV or JSON)
-  Question _questionFromMap(Map<String, String> map) {
+  /// Create Question from map (CSV or JSON) with metadata
+  Question _questionFromMap(
+    Map<String, String> map, {
+    required String topic,
+    required String level,
+    required String subtopic,
+  }) {
     // Extract options if present
     List<String>? options;
     if (map.containsKey('option_a') && map['option_a']?.isNotEmpty == true) {
@@ -212,7 +240,10 @@ class ContentLoaderService {
     // Convert correct option letter to answer text
     String? correctAnswer;
     final correctOption = map['correct_option']?.toUpperCase();
-    if (correctOption != null && options != null && options.isNotEmpty) {
+    if (correctOption != null &&
+        correctOption.isNotEmpty &&
+        options != null &&
+        options.isNotEmpty) {
       final index = correctOption.codeUnitAt(0) - 'A'.codeUnitAt(0);
       if (index >= 0 && index < options.length) {
         correctAnswer = options[index];
@@ -220,14 +251,14 @@ class ContentLoaderService {
     }
 
     return Question(
-      id: map['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      id: map['id'],
       questionText: map['question'] ?? '',
       options: options?.isNotEmpty == true ? options : null,
       correctAnswer: correctAnswer,
       answer: map['answer'] ?? map['explanation'] ?? '',
-      topic: map['topic'],
-      level: map['level'],
-      subtopic: map['subtopic'],
+      topic: map['topic'] ?? topic,
+      level: map['level'] ?? level,
+      subtopic: map['subtopic'] ?? subtopic,
     );
   }
 

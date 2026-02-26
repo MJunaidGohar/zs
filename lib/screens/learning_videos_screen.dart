@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'dart:developer' as developer;
+import '../services/admob_service.dart';
 import '../services/youtube_api_service.dart';
 import '../screens/video_player_screen.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class LearningVideosScreen extends StatefulWidget {
   const LearningVideosScreen({super.key});
@@ -42,34 +42,29 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
   void _loadBannerAd() {
     if (_bannerAd != null) return;
 
-    _bannerAd = BannerAd(
+    _bannerAd = AdMobService.loadBannerAd(
       adUnitId: 'ca-app-pub-5721278995377651/6253583275',
       size: AdSize.banner,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (mounted) {
-            setState(() {
-              _isBannerAdLoaded = true;
-            });
-          }
-        },
-        onAdFailedToLoad: (ad, error) {
-          developer.log('Banner ad failed to load: ${error.message}');
-          ad.dispose();
-          if (mounted) {
+      onAdLoaded: (ad) {
+        if (mounted) {
+          setState(() {
+            _isBannerAdLoaded = true;
+          });
+        }
+      },
+      onAdFailedToLoad: (error) {
+        if (mounted) {
+          setState(() {
             _bannerAd = null;
             _isBannerAdLoaded = false;
-          }
-        },
-      ),
+          });
+        }
+      },
     );
-
-    _bannerAd!.load();
   }
 
   void _disposeBannerAd() {
-    _bannerAd?.dispose();
+    AdMobService.disposeBannerAd(_bannerAd);
     _bannerAd = null;
     _isBannerAdLoaded = false;
   }
@@ -77,29 +72,25 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
   // ------------------- INTERSTITIAL AD -------------------
   void _loadInterstitialAd() {
     if (_adShown) return;
-    InterstitialAd.load(
+    AdMobService.loadInterstitialAd(
       adUnitId: 'ca-app-pub-5721278995377651/6519657994',
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          _interstitialAd = ad;
-          try { ad.show(); _adShown = true; } catch (_) {}
-          ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) => ad.dispose(),
-            onAdFailedToShowFullScreenContent: (ad, err) => ad.dispose(),
-          );
-        },
-        onAdFailedToLoad: (err) {
-          developer.log('Interstitial ad failed to load: ${err.message}');
-          _interstitialAd = null;
-        },
-      ),
+      onAdLoaded: (ad) {
+        _interstitialAd = ad;
+        try { ad.show(); _adShown = true; } catch (_) {}
+        ad.fullScreenContentCallback = FullScreenContentCallback(
+          onAdDismissedFullScreenContent: (ad) => ad.dispose(),
+          onAdFailedToShowFullScreenContent: (ad, err) => ad.dispose(),
+        );
+      },
+      onAdFailedToLoad: (err) {
+        _interstitialAd = null;
+      },
     );
   }
 
   @override
   void dispose() {
-    _interstitialAd?.dispose();
+    AdMobService.disposeInterstitialAd(_interstitialAd);
     _disposeBannerAd();
     _searchController.dispose();
     _searchFocusNode.dispose();

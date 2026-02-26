@@ -63,9 +63,9 @@ class YoutubeSearchResult {
 }
 
 class YoutubeApiService {
-  // IMPORTANT: Replace with your own YouTube Data API v3 key
+  // YouTube Data API v3 key - configured via --dart-define for security
   // Get it from: https://console.cloud.google.com/apis/credentials
-  static const String _apiKey = 'AIzaSyAbHbvlTW2ykEP0VZZzQDBEsj3Sl2xjVyk';
+  static const String _apiKey = String.fromEnvironment('YOUTUBE_API_KEY');
   static const String _baseUrl = 'https://www.googleapis.com/youtube/v3';
 
   // Allowed domains for search - users can only search within these topics

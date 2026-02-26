@@ -1,7 +1,9 @@
 // main_selection_screen.dart
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../widgets/top_bar_scaffold.dart';
 import '../screens/test_screen.dart';
 import '../screens/learn_screen.dart';
@@ -39,6 +41,10 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  
+  // Connectivity monitoring for auto-sync
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  bool _wasOffline = false;
 
   @override
   void initState() {
@@ -52,10 +58,31 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
       curve: Curves.easeOutCubic,
     );
     _initializeContent();
+    _setupConnectivityListener();
     
     // Check notification permission from screen context
     Future.delayed(const Duration(milliseconds: 1000), () {
       NotificationService.checkPermissionFromScreen();
+    });
+  }
+  
+  /// Setup connectivity listener to auto-refresh when coming back online
+  void _setupConnectivityListener() {
+    _connectivitySubscription = Connectivity()
+        .onConnectivityChanged
+        .listen((List<ConnectivityResult> results) {
+      final isOnline = results.isNotEmpty && 
+          results.any((r) => r != ConnectivityResult.none);
+      
+      debugPrint('MainSelectionScreen: Connectivity changed - isOnline=$isOnline, wasOffline=$_wasOffline');
+      
+      if (isOnline && _wasOffline) {
+        // Came back online - auto refresh data
+        debugPrint('MainSelectionScreen: Back online, auto-refreshing...');
+        _refreshData();
+      }
+      
+      _wasOffline = !isOnline;
     });
   }
 
@@ -64,7 +91,9 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
   Future<void> _initializeContent() async {
     try {
-      final freshLoaded = await _contentService.initialize();
+      // CRITICAL FIX: forceReload=true ensures Hive cache loads on app restart
+      // Singleton's _isInitialized flag may persist, skipping cache load without this
+      final freshLoaded = await _contentService.initialize(forceReload: true);
       setState(() {
         _availableTopics = _contentService.getAvailableTopics();
         _isLoading = false;
@@ -133,6 +162,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
   @override
   void dispose() {
     _animationController.dispose();
+    _connectivitySubscription?.cancel();
     super.dispose();
   }
 

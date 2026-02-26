@@ -43,6 +43,7 @@ dependencies:
   audioplayers: ^6.1.0              # For background music
   volume_controller: ^2.0.8         # For hardware volume button control
   file_picker: ^8.0.0+1             # For selecting custom audio files
+ # window_manager: ^0.4.3          # [TEMP] Desktop-only, removed for release
  # permission_handler: ^11.5.0 # Storage permissions
 dev_dependencies:
   flutter_test:

@@ -140,7 +140,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _retryAttempt(Attempt attempt) {
+  Future<void> _retryAttempt(Attempt attempt) async {
+    debugPrint('🔍 _retryAttempt called for: ${attempt.displayTopic}/${attempt.displayLevel}/${attempt.displaySubtopic}');
+    
+    final wrongService = WrongQuestionsService();
+    final allWrongQuestions = await wrongService.getWrongQuestions();
+    debugPrint('🔍 Total wrong questions in storage: ${allWrongQuestions.length}');
+    
+    // Filter wrong questions for this specific topic/level/subtopic
+    final topicKey = attempt.displayTopic.toLowerCase();
+    final levelKey = attempt.displayLevel.toLowerCase();
+    final subtopicKey = attempt.displaySubtopic.toLowerCase();
+    
+    final filteredWrongQuestions = allWrongQuestions.where((q) {
+      final qTopic = (q.topic ?? q.selectedClass ?? '').toLowerCase();
+      final qLevel = (q.level ?? q.subject ?? '').toLowerCase();
+      final qSubtopic = (q.subtopic ?? q.selectedUnit ?? '').toLowerCase();
+      
+      final matches = qTopic == topicKey && 
+             qLevel == levelKey && 
+             qSubtopic == subtopicKey;
+      
+      debugPrint('🔍 Question: topic=$qTopic, level=$qLevel, subtopic=$qSubtopic, matches=$matches');
+      return matches;
+    }).toList();
+    
+    debugPrint('🔍 Filtered wrong questions: ${filteredWrongQuestions.length}');
+
+    if (!mounted) return;
+
+    if (filteredWrongQuestions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No wrong questions found to retry for this topic.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -150,6 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           selectedSubtopic: attempt.displaySubtopic,
           selectedCategory: attempt.selectedCategory,
           selectedQuestionType: attempt.questionType,
+          onlyWrongQuestions: filteredWrongQuestions,
         ),
       ),
     ).then((_) => _loadProfileData());
@@ -319,14 +358,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     margin: const EdgeInsets.symmetric(vertical: 6),
                                     child: ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                       title: Text(a.displaySubtopic),
                                       subtitle: Text(
                                         "Score: ${a.score}/${a.total}\n"
                                             "Date: ${DateFormat('dd MMM yyyy, hh:mm a').format(a.timestamp.toLocal())}",
                                       ),
-                                      trailing: ElevatedButton(
-                                        onPressed: () => _retryAttempt(a),
-                                        child: const Text("Retry"),
+                                      trailing: SizedBox(
+                                        width: 80,
+                                        child: ElevatedButton(
+                                          onPressed: () => _retryAttempt(a),
+                                          style: ElevatedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                                            minimumSize: const Size(80, 36),
+                                          ),
+                                          child: const Text("Retry", style: TextStyle(fontSize: 12)),
+                                        ),
                                       ),
                                     ),
                                   );

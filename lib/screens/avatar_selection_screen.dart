@@ -109,9 +109,11 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen>
 
                   const SizedBox(height: AppSpacing.xxxxl),
 
-                  // Avatar Selection Grid - use const for static parts
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  // Avatar Selection Grid - use Wrap instead of Row to prevent overflow
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: AppSpacing.md,
+                    runSpacing: AppSpacing.md,
                     children: _buildAvatarItems(theme, isDark),
                   ),
 

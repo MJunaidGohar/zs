@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:hive/hive.dart';
@@ -41,13 +42,18 @@ class GoogleSheetsContentService {
   Box? _cacheBox;
 
   /// Initialize service - checks connectivity and loads appropriate data
-  /// 
+  ///
   /// Returns: true if fresh data was loaded from internet, false if using cached data
-  Future<bool> initialize() async {
-    if (_isInitialized) return false; // Already initialized
+  Future<bool> initialize({bool forceReload = false}) async {
+    // Allow force reload for cases where cache needs to be reloaded
+    if (_isInitialized && !forceReload) {
+      debugPrint('GoogleSheetsContentService: Already initialized, skipping');
+      return false;
+    }
 
     // Get Hive box
     _cacheBox = HiveService.gsheetsCacheBox;
+    debugPrint('GoogleSheetsContentService: Hive box obtained, isOpen=${_cacheBox?.isOpen}');
 
     _studyCache = {};
     _testCache = {};
@@ -59,29 +65,37 @@ class GoogleSheetsContentService {
       // Check connectivity
       final connectivityResult = await Connectivity().checkConnectivity();
       final isOnline = connectivityResult != ConnectivityResult.none;
+      debugPrint('GoogleSheetsContentService: isOnline=$isOnline');
 
       if (isOnline) {
         // Online: Fetch fresh data and save locally
         try {
           await _fetchAndCacheFromSheets();
           _isInitialized = true;
+          debugPrint('GoogleSheetsContentService: Fresh data loaded from internet');
           return true; // Fresh data loaded
         } catch (e) {
+          debugPrint('GoogleSheetsContentService: Fetch failed, trying cache: $e');
           // Fetch failed, try to load cached data
           final hasCache = await _loadFromLocalStorage();
           _isInitialized = true;
+          debugPrint('GoogleSheetsContentService: Using cache, hasCache=$hasCache');
           return false; // Using cache
         }
       } else {
         // Offline: Load from local storage
+        debugPrint('GoogleSheetsContentService: Offline mode, loading from Hive');
         final hasCache = await _loadFromLocalStorage();
         _isInitialized = true;
+        debugPrint('GoogleSheetsContentService: Cache loaded: hasCache=$hasCache, topics=${_availableTopics?.length}');
         return false; // Using cache
       }
     } catch (e) {
       // Error checking connectivity, try local storage
+      debugPrint('GoogleSheetsContentService: Connectivity check error: $e');
       final hasCache = await _loadFromLocalStorage();
       _isInitialized = true;
+      debugPrint('GoogleSheetsContentService: Fallback cache loaded: hasCache=$hasCache');
       return false;
     }
   }
@@ -229,55 +243,77 @@ class GoogleSheetsContentService {
 
   /// Load data from Hive
   Future<bool> _loadFromLocalStorage() async {
-    if (_cacheBox == null || !_cacheBox!.isOpen) return false;
-    
-    final studyJson = _cacheBox!.get(_hiveStudyData);
-    final testJson = _cacheBox!.get(_hiveTestData);
+    if (_cacheBox == null || !_cacheBox!.isOpen) {
+      debugPrint('GoogleSheetsContentService: Cache box not available');
+      return false;
+    }
+
     final topicsList = _cacheBox!.get(_hiveTopics);
     final levelsJson = _cacheBox!.get(_hiveLevels);
     final subtopicsJson = _cacheBox!.get(_hiveSubtopics);
+    final studyJson = _cacheBox!.get(_hiveStudyData);
+    final testJson = _cacheBox!.get(_hiveTestData);
     final lastSync = _cacheBox!.get(_hiveLastSync);
-    
-    if (studyJson == null || testJson == null || topicsList == null) {
-      return false; // No cached data available
+
+    debugPrint('GoogleSheetsContentService: Hive data - topics=${topicsList != null}, study=${studyJson != null}, test=${testJson != null}');
+
+    // CRITICAL FIX: Only require topics list, not both study AND test data
+    // This allows offline mode to work if only one type of content was cached
+    if (topicsList == null) {
+      debugPrint('GoogleSheetsContentService: No cached topics available');
+      return false;
     }
 
     try {
-      // Restore study cache
-      final studyData = jsonDecode(studyJson) as Map<String, dynamic>;
-      _studyCache = _convertJsonToCache(studyData);
-      
-      // Restore test cache
-      final testData = jsonDecode(testJson) as Map<String, dynamic>;
-      _testCache = _convertJsonToCache(testData);
-      
-      // Restore topics
+      // Restore topics first (essential for offline mode)
       _availableTopics = (topicsList as List<dynamic>).cast<String>().toSet();
-      
+      debugPrint('GoogleSheetsContentService: Restored ${_availableTopics?.length} topics: $_availableTopics');
+
       // Restore levels
       if (levelsJson != null) {
         final levelsData = jsonDecode(levelsJson) as Map<String, dynamic>;
         _availableLevelsPerTopic = levelsData.map(
           (k, v) => MapEntry(k, (v as List<dynamic>).cast<String>().toSet()),
         );
+        debugPrint('GoogleSheetsContentService: Restored levels for ${_availableLevelsPerTopic?.length} topics');
       }
-      
+
       // Restore subtopics
       if (subtopicsJson != null) {
         final subtopicsData = jsonDecode(subtopicsJson) as Map<String, dynamic>;
         _availableSubtopicsPerCombo = subtopicsData.map(
           (k, v) => MapEntry(k, (v as List<dynamic>).cast<String>().toSet()),
         );
+        debugPrint('GoogleSheetsContentService: Restored subtopics for ${_availableSubtopicsPerCombo?.length} combos');
       }
-      
+
+      // Restore study cache if available
+      if (studyJson != null) {
+        final studyData = jsonDecode(studyJson) as Map<String, dynamic>;
+        _studyCache = _convertJsonToCache(studyData);
+        debugPrint('GoogleSheetsContentService: Restored ${_studyCache?.length} study entries');
+      } else {
+        _studyCache = {};
+      }
+
+      // Restore test cache if available
+      if (testJson != null) {
+        final testData = jsonDecode(testJson) as Map<String, dynamic>;
+        _testCache = _convertJsonToCache(testData);
+        debugPrint('GoogleSheetsContentService: Restored ${_testCache?.length} test entries');
+      } else {
+        _testCache = {};
+      }
+
       // Restore sync time
       if (lastSync != null) {
         _lastSyncTime = DateTime.fromMillisecondsSinceEpoch(lastSync);
       }
-      
+
       return true;
-    } catch (e) {
-      // Failed to parse cached data
+    } catch (e, stackTrace) {
+      debugPrint('GoogleSheetsContentService: Error parsing cached data: $e');
+      debugPrint('Stack trace: $stackTrace');
       return false;
     }
   }
@@ -340,14 +376,18 @@ class GoogleSheetsContentService {
   Question _createQuestionFromMap(Map<String, String> map, {required bool isTest}) {
     // Extract options for test questions
     List<String>? options;
-    if (isTest && 
-        (map['option_a']?.isNotEmpty == true || map['option_b']?.isNotEmpty == true)) {
-      options = [
+    if (isTest) {
+      // Create fixed 4-slot array to preserve index alignment with correct_option
+      final rawOptions = [
         map['option_a'] ?? '',
         map['option_b'] ?? '',
         map['option_c'] ?? '',
         map['option_d'] ?? '',
-      ].where((o) => o.isNotEmpty).toList();
+      ];
+      // Only create options if at least one exists
+      if (rawOptions.any((o) => o.isNotEmpty)) {
+        options = rawOptions; // Keep all 4 slots including empty ones to maintain A/B/C/D indices
+      }
     }
 
     // Convert correct option letter to answer text
@@ -355,7 +395,8 @@ class GoogleSheetsContentService {
     final correctOption = map['correct_option']?.toUpperCase();
     if (correctOption != null && options != null && options.isNotEmpty) {
       final index = correctOption.codeUnitAt(0) - 'A'.codeUnitAt(0);
-      if (index >= 0 && index < options.length) {
+      // Only use correct answer if index is valid AND the option text is not empty
+      if (index >= 0 && index < options.length && options[index].isNotEmpty) {
         correctAnswer = options[index];
       }
     }
@@ -375,17 +416,39 @@ class GoogleSheetsContentService {
   // ==================== Public API ====================
 
   /// Get all topics that have content
+  /// Ordered: English, Computer, Digital Marketing, Web Development
   List<String> getAvailableTopics() {
     if (_availableTopics == null || _availableTopics!.isEmpty) return [];
-    return _availableTopics!.toList()..sort();
+    final topics = _availableTopics!.toList();
+    final topicOrder = ['English', 'Computer', 'Digital Marketing', 'Web Development'];
+    topics.sort((a, b) {
+      final indexA = topicOrder.indexOf(a);
+      final indexB = topicOrder.indexOf(b);
+      if (indexA != -1 && indexB != -1) return indexA.compareTo(indexB);
+      if (indexA != -1) return -1;
+      if (indexB != -1) return 1;
+      return a.compareTo(b);
+    });
+    return topics;
   }
 
   /// Get levels for a specific topic
+  /// Ordered: Basic, Intermediate, Advance, Pro Master
   List<String> getAvailableLevelsForTopic(String topic) {
     if (_availableLevelsPerTopic == null) return [];
     final levels = _availableLevelsPerTopic![topic];
     if (levels == null) return [];
-    return levels.toList()..sort();
+    final levelsList = levels.toList();
+    final levelOrder = ['Basic', 'Intermediate', 'Advance', 'Pro Master'];
+    levelsList.sort((a, b) {
+      final indexA = levelOrder.indexOf(a);
+      final indexB = levelOrder.indexOf(b);
+      if (indexA != -1 && indexB != -1) return indexA.compareTo(indexB);
+      if (indexA != -1) return -1;
+      if (indexB != -1) return 1;
+      return a.compareTo(b);
+    });
+    return levelsList;
   }
 
   /// Get subtopics for a topic+level combination
@@ -462,11 +525,31 @@ class GoogleSheetsContentService {
            (_studyCache![cacheKey]?.isNotEmpty ?? false);
   }
 
-  /// Check if test content exists
+  /// Check if test content exists (checks both memory cache and Hive storage)
   bool hasTestContent(String topic, String level, String subtopic) {
     final cacheKey = '${topic}_${level}_$subtopic';
-    return _testCache?.containsKey(cacheKey) == true && 
-           (_testCache![cacheKey]?.isNotEmpty ?? false);
+
+    // Check memory cache first
+    if (_testCache?.containsKey(cacheKey) == true &&
+        (_testCache![cacheKey]?.isNotEmpty ?? false)) {
+      return true;
+    }
+
+    // Fallback: Check if data exists in Hive storage without loading full cache
+    if (_cacheBox?.isOpen == true) {
+      try {
+        final testJson = _cacheBox!.get(_hiveTestData);
+        if (testJson != null && testJson is String) {
+          final testData = jsonDecode(testJson) as Map<String, dynamic>;
+          final questions = testData[cacheKey] as List<dynamic>?;
+          return questions != null && questions.isNotEmpty;
+        }
+      } catch (e) {
+        debugPrint('Error checking Hive for test content: $e');
+      }
+    }
+
+    return false;
   }
 
   /// Clear cache and local storage (useful for full refresh)

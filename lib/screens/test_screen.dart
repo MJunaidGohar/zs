@@ -66,26 +66,43 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
 
   /// Loads questions either from wrong list or filters MCQs from all questions
   Future<void> _loadQuestions() async {
+    debugPrint('🔍 [TestScreen._loadQuestions] Starting...');
+    debugPrint('🔍 onlyWrongQuestions: ${widget.onlyWrongQuestions?.length ?? 'null'}');
+    
     final questionService = QuestionService();
 
     if (widget.onlyWrongQuestions != null && widget.onlyWrongQuestions!.isNotEmpty) {
       // ✅ Retry mode: use only wrong questions
-      questions = widget.onlyWrongQuestions!
-          .where((q) => q.options != null && q.options!.isNotEmpty)
-          .map((q) => Question(
-                id: q.id,
-                questionText: q.questionText,
-                options: q.options != null ? List<String>.from(q.options!) : null,
-                correctAnswer: q.correctAnswer,
-                answer: q.answer,
-                topic: q.topic ?? q.selectedClass,
-                level: q.level ?? q.subject,
-                subtopic: q.subtopic ?? q.selectedUnit,
-              ))
-          .toList();
+      debugPrint('🔍 Processing ${widget.onlyWrongQuestions!.length} wrong questions...');
+      
+      final filtered = widget.onlyWrongQuestions!.where((q) {
+        final hasOptions = q.options != null && q.options!.isNotEmpty;
+        debugPrint('🔍 Question ${q.id}: options=${q.options}, hasOptions=$hasOptions');
+        return hasOptions;
+      }).toList();
+      
+      debugPrint('🔍 After filtering, ${filtered.length} questions remain');
+      
+      questions = filtered.map((q) {
+        final newQ = Question(
+          id: q.id,
+          questionText: q.questionText,
+          options: q.options != null ? List<String>.from(q.options!) : null,
+          correctAnswer: q.correctAnswer,
+          answer: q.answer,
+          topic: q.topic ?? q.selectedClass,
+          level: q.level ?? q.subject,
+          subtopic: q.subtopic ?? q.selectedUnit,
+        );
+        debugPrint('🔍 Created Question: topic=${newQ.topic}, level=${newQ.level}, subtopic=${newQ.subtopic}');
+        return newQ;
+      }).toList();
+      
       for (final q in questions) {
         q.options?.shuffle();
       }
+      
+      debugPrint('🔍 Final questions list: ${questions.length} questions');
     } else {
       // ✅ Load MCQs from JSON assets
       final mcqs = await questionService.loadTestQuestions(
@@ -157,16 +174,24 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
 
           await _attemptService.saveOrUpdateAttempt(attempt);
 
+          debugPrint('🔍 [TestScreen] Saving ${wrongQuestions.length} wrong questions...');
           if (wrongQuestions.isNotEmpty) {
+            for (var q in wrongQuestions) {
+              debugPrint('🔍 Saving wrong question: ${q.id}, topic=${q.topic}, level=${q.level}, subtopic=${q.subtopic}');
+            }
             await _wrongService.saveWrongQuestions(wrongQuestions);
+            debugPrint('🔍 Wrong questions saved successfully');
           }
 
           if (widget.onlyWrongQuestions != null) {
+            debugPrint('🔍 [TestScreen] This was a retry attempt - removing corrected questions...');
             final corrected = widget.onlyWrongQuestions!
                 .where((q) => !wrongQuestions.any((w) => w.id == q.id))
                 .toList();
+            debugPrint('🔍 Corrected questions: ${corrected.length}');
             if (corrected.isNotEmpty) {
               await _wrongService.removeCorrectedQuestions(corrected);
+              debugPrint('🔍 Removed corrected questions from storage');
             }
           }
         } catch (e) {
