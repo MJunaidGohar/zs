@@ -128,3 +128,8 @@ GoogleService-Info.plist
 !**/ios/**/default.mode2v3
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
+
+# Build scripts (contain API keys)
+build_apk.bat
+build_aab.bat
+build_release.bat
