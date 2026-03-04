@@ -94,8 +94,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      width: 360,
-      height: 500,
       decoration: BoxDecoration(
         color: isDark ? theme.colorScheme.surface : theme.colorScheme.background,
         borderRadius: BorderRadius.circular(20),
@@ -122,8 +120,15 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
 
-            // Daily Tip Banner
-            _buildTipBanner(theme, isDark),
+            // Daily Tip Banner - only show when chat has no messages
+            Consumer<ChatProvider>(
+              builder: (context, provider, _) {
+                if (provider.messages.isNotEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return _buildTipBanner(theme, isDark);
+              },
+            ),
 
             // Messages List
             Expanded(
@@ -138,6 +143,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
                   return ListView.builder(
                     controller: _scrollController,
+                    physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: messages.length + (isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
@@ -221,17 +227,10 @@ class _ChatScreenState extends State<ChatScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            theme.colorScheme.tertiary.withOpacity(isDark ? 0.2 : 0.1),
-            theme.colorScheme.secondary.withOpacity(isDark ? 0.15 : 0.08),
-          ],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
+        color: theme.colorScheme.primaryContainer.withOpacity(isDark ? 0.3 : 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.tertiary.withOpacity(0.2),
+          color: theme.colorScheme.primary.withOpacity(0.15),
           width: 1,
         ),
       ),
@@ -240,7 +239,7 @@ class _ChatScreenState extends State<ChatScreen> {
           Icon(
             tip.icon ?? Icons.lightbulb_outline,
             size: 18,
-            color: theme.colorScheme.tertiary,
+            color: theme.colorScheme.primary,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -263,59 +262,37 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildWelcomeView(ThemeData theme, bool isDark) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    theme.colorScheme.primary.withOpacity(0.2),
-                    theme.colorScheme.primary.withOpacity(0.1),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(40),
-              ),
-              child: Icon(
-                Icons.school,
-                size: 40,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 20),
             Text(
               '👋 Welcome to ZS Assistant!',
-              style: theme.textTheme.titleMedium?.copyWith(
+              style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
-              'Ask me anything about:\n• English\n• Computer Basics\n• Digital Marketing\n• Web Development\n• YouTube Growth',
-              style: theme.textTheme.bodyMedium?.copyWith(
+              'Ask your question',
+              style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
-                height: 1.5,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: theme.colorScheme.primaryContainer.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                '💡 15 messages per day',
+                '💡 15 messages/day',
                 style: TextStyle(
                   color: theme.colorScheme.onPrimaryContainer,
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -386,29 +363,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      gradient: hasQuota
-                          ? LinearGradient(
-                              colors: [
-                                theme.colorScheme.primary,
-                                theme.colorScheme.primary.withBlue(
-                                  (theme.colorScheme.primary.blue + 30).clamp(0, 255),
-                                ),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                          : null,
-                      color: hasQuota ? null : theme.colorScheme.onSurface.withOpacity(0.1),
+                      color: hasQuota
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(24),
-                      boxShadow: hasQuota
-                          ? [
-                              BoxShadow(
-                                color: theme.colorScheme.primary.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ]
-                          : null,
                     ),
                     child: Icon(
                       Icons.send,

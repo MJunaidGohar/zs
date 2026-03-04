@@ -10,17 +10,26 @@ class WrongQuestionsService {
   }
 
   Future<void> saveWrongQuestions(List<Question> questions) async {
-    await _box.clear();
-    await _box.addAll(questions.map((q) => Question(
-      id: q.id,
-      questionText: q.questionText,
-      options: q.options != null ? List<String>.from(q.options!) : null,
-      correctAnswer: q.correctAnswer,
-      answer: q.answer,
-      topic: q.topic ?? q.selectedClass,
-      level: q.level ?? q.subject,
-      subtopic: q.subtopic ?? q.selectedUnit,
-    )));
+    // Get existing wrong questions
+    final existing = _box.values.toList();
+    final existingIds = existing.map((q) => q.id).toSet();
+    
+    // Filter out duplicates (questions that already exist)
+    final newQuestions = questions.where((q) => !existingIds.contains(q.id)).toList();
+    
+    // Add only new wrong questions (append, don't clear)
+    if (newQuestions.isNotEmpty) {
+      await _box.addAll(newQuestions.map((q) => Question(
+        id: q.id,
+        questionText: q.questionText,
+        options: q.options != null ? List<String>.from(q.options!) : null,
+        correctAnswer: q.correctAnswer,
+        answer: q.answer,
+        topic: (q.topic ?? q.selectedClass)?.toLowerCase(),
+        level: (q.level ?? q.subject)?.toLowerCase(),
+        subtopic: (q.subtopic ?? q.selectedUnit)?.toLowerCase(),
+      )));
+    }
   }
 
   Future<void> clearWrongQuestions() async {

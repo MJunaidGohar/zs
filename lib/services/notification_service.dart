@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive/hive.dart';
@@ -6,6 +7,7 @@ import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'dart:io';
+import 'dart:developer' as developer;
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
@@ -14,11 +16,15 @@ class NotificationService {
   static const String _boxName = "notification_settings";
   static bool _startupPermissionRequested = false;
 
+  // [TEMP] Check if running on web - notifications not supported on web
+  static bool get _isWeb => kIsWeb;
+
   static AndroidFlutterLocalNotificationsPlugin?
-  _androidPlugin() => _notifications
+  _androidPlugin() => _isWeb ? null : _notifications
       .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
   static Future<bool> _ensureAndroidNotificationPermission() async {
+    if (_isWeb) return false; // [TEMP] Notifications not supported on web
     if (!Platform.isAndroid) return true;
 
     final androidPlugin = _androidPlugin();
@@ -36,6 +42,7 @@ class NotificationService {
   }
 
   static Future<AndroidScheduleMode> _resolveAndroidScheduleMode() async {
+    if (_isWeb) return AndroidScheduleMode.inexactAllowWhileIdle; // [TEMP] Web stub
     if (!Platform.isAndroid) return AndroidScheduleMode.inexactAllowWhileIdle;
 
     final androidPlugin = _androidPlugin();
@@ -54,6 +61,10 @@ class NotificationService {
 
   /// Initialize plugin
   static Future<void> init() async {
+    if (_isWeb) {
+      developer.log('[TEMP] Notifications: Skipped initialization on web');
+      return; // [TEMP] Skip notification init on web
+    }
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iOS = DarwinInitializationSettings();
 
@@ -149,6 +160,7 @@ class NotificationService {
 
   /// Check if notification permission is granted without requesting
   static Future<bool> _checkNotificationPermissionStatus() async {
+    if (_isWeb) return false; // [TEMP] Notifications not supported on web
     if (!Platform.isAndroid) return true;
     
     // On Android 13+, explicitly check the POST_NOTIFICATIONS permission status
@@ -200,6 +212,10 @@ class NotificationService {
 
   /// Request notification permissions (to be called when user first selects time)
   static Future<bool> requestNotificationPermissions() async {
+    if (_isWeb) {
+      debugPrint('[TEMP] Notifications: Permission request skipped on web');
+      return false; // [TEMP] Notifications not supported on web
+    }
     debugPrint('🔔 ===== REQUESTING NOTIFICATION PERMISSION =====');
     
     try {
@@ -252,6 +268,7 @@ class NotificationService {
 
   /// Internal: Schedule without requesting permissions (used during init for restore)
   static Future<bool> _scheduleWithoutPermissionRequest(int hour, int minute) async {
+    if (_isWeb) return false; // [TEMP] Notifications not supported on web
     // Check if permissions are already granted
     if (Platform.isAndroid) {
       final androidPlugin = _androidPlugin();
@@ -301,6 +318,7 @@ class NotificationService {
 
   /// Check if exact alarm permission is granted (Android 12+)
   static Future<bool> canScheduleExactAlarms() async {
+    if (_isWeb) return false; // [TEMP] Not supported on web
     if (!Platform.isAndroid) return true;
     final androidPlugin = _androidPlugin();
     return await androidPlugin?.canScheduleExactNotifications() ?? false;
@@ -308,6 +326,7 @@ class NotificationService {
 
   /// Open system settings to enable exact alarms
   static Future<void> openExactAlarmSettings() async {
+    if (_isWeb) return; // [TEMP] Not supported on web
     if (!Platform.isAndroid) return;
     final androidPlugin = _androidPlugin();
     await androidPlugin?.requestExactAlarmsPermission();
@@ -315,6 +334,10 @@ class NotificationService {
 
   /// Schedule daily reminder at given time
   static Future<bool> scheduleDailyReminder(int hour, int minute) async {
+    if (_isWeb) {
+      debugPrint('[TEMP] Notifications: Scheduling skipped on web');
+      return false; // [TEMP] Notifications not supported on web
+    }
     final enabled = await _ensureAndroidNotificationPermission();
     if (!enabled) return false;
 
@@ -373,6 +396,7 @@ class NotificationService {
 
   /// Cancel all reminders
   static Future<void> cancelAll() async {
+    if (_isWeb) return; // [TEMP] Not supported on web
     await _notifications.cancelAll();
   }
 }

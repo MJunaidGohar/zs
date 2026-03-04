@@ -19,8 +19,9 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# VS Code (uncomment if you want to ignore)
-#.vscode/
+# VS Code
+.vscode/launch.json
+.vscode/settings.json
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -128,8 +129,3 @@ GoogleService-Info.plist
 !**/ios/**/default.mode2v3
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
-
-# Build scripts (contain API keys)
-build_apk.bat
-build_aab.bat
-build_release.bat

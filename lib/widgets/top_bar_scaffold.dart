@@ -3,7 +3,10 @@ import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/theme_provider.dart';
 import '../screens/profile_screen.dart';
+import '../utils/app_theme.dart';
 
+/// TopBarScaffold - Universal app bar with professional Royal Blue styling
+/// Provides consistent header across all screens with avatar, theme toggle, and menu
 class TopBarScaffold extends StatelessWidget {
   final String title;
   final Widget body;
@@ -29,98 +32,78 @@ class TopBarScaffold extends StatelessWidget {
         title: Text(
           title,
           style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+            letterSpacing: 0.3,
           ),
         ),
 
-        /// Gradient Background with enhanced colors
+        /// Professional Royal Blue gradient background
         flexibleSpace: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: isDark
-                  ? [
-                      const Color(0xFF667EEA),
-                      const Color(0xFF764BA2),
-                    ]
-                  : [
-                      const Color(0xFF4FACFE),
-                      const Color(0xFF00F2FE),
-                    ],
+              colors: AppColors.gradientHeader,
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
         ),
 
-        elevation: 8,
-        shadowColor: isDark ? Colors.purple.withValues(alpha: 0.3) : Colors.blue.withValues(alpha: 0.3),
+        elevation: 0,
+        scrolledUnderElevation: 0,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(24),
+            bottom: Radius.circular(AppBorderRadius.lg),
           ),
         ),
 
-        /// Leading Avatar with glow effect
+        /// Leading Avatar - Clean and professional
         leading: leadingWidget ??
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: userProvider.selectedAvatar != null
                   ? Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: isDark 
-                          ? Colors.purpleAccent.withValues(alpha: 0.6)
-                          : Colors.blueAccent.withValues(alpha: 0.5),
-                      blurRadius: 10,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                  border: Border.all(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.4)
-                          : Colors.white.withValues(alpha: 0.8),
-                      width: 2.5),
-                ),
-                child: ClipOval(
-                  child: Image.asset(
-                    userProvider.selectedAvatar!,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              )
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.6),
+                          width: 2,
+                        ),
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          userProvider.selectedAvatar!,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    )
                   : Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white.withValues(alpha: 0.2),
                       ),
-                      child: Icon(Icons.account_circle_outlined,
-                          color: Colors.white.withValues(alpha: 0.9), size: 32),
+                      child: Icon(
+                        Icons.account_circle_outlined,
+                        color: Colors.white.withValues(alpha: 0.9),
+                        size: 32,
+                      ),
                     ),
             ),
 
         actions: [
-          /// Theme toggle with animated icon
+          /// Theme toggle button
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 4),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppBorderRadius.md),
             ),
             child: IconButton(
-              icon: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: Icon(
-                  themeProvider.isDarkMode
-                      ? Icons.wb_sunny_rounded
-                      : Icons.nights_stay_rounded,
-                  key: ValueKey(themeProvider.isDarkMode),
-                  color: themeProvider.isDarkMode
-                      ? Colors.orange.shade300
-                      : Colors.indigo.shade300,
-                ),
+              icon: Icon(
+                themeProvider.isDarkMode
+                    ? Icons.wb_sunny_rounded
+                    : Icons.nights_stay_rounded,
+                color: Colors.white,
               ),
               tooltip: themeProvider.isDarkMode
                   ? "Switch to Light Mode"
@@ -129,22 +112,22 @@ class TopBarScaffold extends StatelessWidget {
             ),
           ),
 
-          /// Popup Menu with glassmorphism
+          /// Popup Menu
           Container(
             margin: const EdgeInsets.only(right: 12, left: 4),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppBorderRadius.md),
             ),
             child: PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: Colors.white),
-              color: isDark 
-                  ? const Color(0xFF2D2D3A).withValues(alpha: 0.95)
-                  : Colors.white.withValues(alpha: 0.95),
+              color: isDark
+                  ? AppColors.surfaceDark
+                  : AppColors.surfaceLight,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppBorderRadius.lg),
               ),
-              elevation: 8,
+              elevation: 2,
               onSelected: (value) {
                 if (value == 'avatar') {
                   Navigator.pushNamed(context, '/avatarSelection');
@@ -161,14 +144,19 @@ class TopBarScaffold extends StatelessWidget {
                   value: 'avatar',
                   child: Row(
                     children: [
-                      Icon(Icons.face, size: 20, 
-                          color: isDark ? Colors.purpleAccent : Colors.blueAccent),
+                      Icon(
+                        Icons.face,
+                        size: 20,
+                        color: isDark ? AppColors.primaryLight : AppColors.primary,
+                      ),
                       const SizedBox(width: 12),
-                      Text("Change Avatar",
-                          style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black87,
-                            fontWeight: FontWeight.w500,
-                          )),
+                      Text(
+                        "Change Avatar",
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -176,14 +164,19 @@ class TopBarScaffold extends StatelessWidget {
                   value: 'profile',
                   child: Row(
                     children: [
-                      Icon(Icons.person, size: 20,
-                          color: isDark ? Colors.purpleAccent : Colors.blueAccent),
+                      Icon(
+                        Icons.person,
+                        size: 20,
+                        color: isDark ? AppColors.primaryLight : AppColors.primary,
+                      ),
                       const SizedBox(width: 12),
-                      Text("Profile",
-                          style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black87,
-                            fontWeight: FontWeight.w500,
-                          )),
+                      Text(
+                        "Profile",
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ],
                   ),
                 ),

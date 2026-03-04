@@ -62,12 +62,24 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
   }
 
   void _initializePosition() {
-    final size = MediaQuery.of(context).size;
-    final position = _buttonService.getPosition(size.width, size.height);
+    try {
+      final size = MediaQuery.of(context).size;
+      final position = _buttonService.getPosition(size.width, size.height);
 
-    setState(() {
-      _position = position.toOffset();
-    });
+      setState(() {
+        _position = position.toOffset();
+      });
+    } catch (e) {
+      debugPrint('Button position error: $e');
+      // Use default position
+      final size = MediaQuery.of(context).size;
+      setState(() {
+        _position = Offset(
+          size.width - _buttonSize - _padding,
+          size.height - _buttonSize - _padding - 80,
+        );
+      });
+    }
 
     if (widget.isVisible) {
       _fadeController.forward();
@@ -98,11 +110,11 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
               child: Material(
                 type: MaterialType.transparency,
                 child: GestureDetector(
-                  behavior: HitTestBehavior.translucent, // Only hit test on visible parts
-                  onPanStart: (_) => setState(() => _isDragging = true),
+                  behavior: HitTestBehavior.translucent,
+                  onTap: _handleTap,
+                  onLongPressStart: (_) => setState(() => _isDragging = true),
                   onPanUpdate: _handleDrag,
                   onPanEnd: _handleDragEnd,
-                  onTap: _handleTap,
                   child: Container(
                     width: _buttonSize,
                     height: _buttonSize,
@@ -181,6 +193,7 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
     final size = MediaQuery.of(context).size;
 
     setState(() {
+      _isDragging = true;
       _position += details.delta;
       // Clamp to screen bounds
       _position = _buttonService.clampPosition(
@@ -210,9 +223,7 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
   }
 
   void _handleTap() {
-    // Don't trigger tap if was dragging
-    if (_isDragging) return;
-
+    debugPrint('Chat button tapped!');
     widget.onTap();
   }
 

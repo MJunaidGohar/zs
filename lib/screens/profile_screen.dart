@@ -148,14 +148,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     debugPrint('🔍 Total wrong questions in storage: ${allWrongQuestions.length}');
     
     // Filter wrong questions for this specific topic/level/subtopic
-    final topicKey = attempt.displayTopic.toLowerCase();
-    final levelKey = attempt.displayLevel.toLowerCase();
-    final subtopicKey = attempt.displaySubtopic.toLowerCase();
+    final topicKey = attempt.displayTopic.toLowerCase().trim();
+    final levelKey = attempt.displayLevel.toLowerCase().trim();
+    final subtopicKey = attempt.displaySubtopic.toLowerCase().trim();
     
     final filteredWrongQuestions = allWrongQuestions.where((q) {
-      final qTopic = (q.topic ?? q.selectedClass ?? '').toLowerCase();
-      final qLevel = (q.level ?? q.subject ?? '').toLowerCase();
-      final qSubtopic = (q.subtopic ?? q.selectedUnit ?? '').toLowerCase();
+      final qTopic = (q.topic ?? q.selectedClass ?? '').toLowerCase().trim();
+      final qLevel = (q.level ?? q.subject ?? '').toLowerCase().trim();
+      final qSubtopic = (q.subtopic ?? q.selectedUnit ?? '').toLowerCase().trim();
       
       final matches = qTopic == topicKey && 
              qLevel == levelKey && 

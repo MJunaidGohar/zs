@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -100,13 +99,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ),
     );
 
-    _glowPulse = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _floatController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
     // Start animations
     _mascotController.forward();
     _staggerController.forward();
@@ -124,7 +116,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void dispose() {
     _mascotController.dispose();
     _staggerController.dispose();
-    _floatController.dispose();
     _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
     super.dispose();
@@ -313,64 +304,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildBackgroundBubbles(bool isDark, Size size) {
-    return Stack(
-      children: [
-        // Top right bubble
-        Positioned(
-          top: -size.height * 0.1,
-          right: -size.width * 0.2,
-          child: AnimatedBuilder(
-            animation: _floatController,
-            builder: (_, __) {
-              return Transform.translate(
-                offset: Offset(0, _mascotFloat.value * 0.5),
-                child: Container(
-                  width: size.width * 0.6,
-                  height: size.width * 0.6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        (isDark ? AppColors.primaryLight : AppColors.primary)
-                            .withOpacity(0.15),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        
-        // Bottom left bubble
-        Positioned(
-          bottom: size.height * 0.15,
-          left: -size.width * 0.3,
-          child: AnimatedBuilder(
-            animation: _floatController,
-            builder: (_, __) {
-              return Transform.translate(
-                offset: Offset(0, -_mascotFloat.value * 0.3),
-                child: Container(
-                  width: size.width * 0.5,
-                  height: size.width * 0.5,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        (isDark ? AppColors.secondaryLight : AppColors.secondary)
-                            .withOpacity(0.12),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
+    // Simplified background with subtle color only
+    return Container(
+      color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
     );
   }
 
@@ -384,24 +320,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: isDark
-                    ? [AppColors.primaryLight, AppColors.primary]
-                    : [AppColors.primary, AppColors.primaryDark],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: AppColors.primary,
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
-                  blurRadius: 12,
-                  spreadRadius: 2,
-                ),
-              ],
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
-                width: 3,
+                color: Colors.white.withOpacity(0.4),
+                width: 2,
               ),
             ),
             child: ClipOval(
@@ -418,12 +341,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: (isDark ? AppColors.surfaceDark : AppColors.surfaceLight)
-                  .withOpacity(0.8),
+              color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: (isDark ? AppColors.dividerDark : AppColors.dividerLight)
-                    .withOpacity(0.5),
+                color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
               ),
             ),
             child: Row(
@@ -454,82 +375,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildAnimatedMascot(bool isDark) {
     return ScaleTransition(
       scale: _mascotScale,
-      child: AnimatedBuilder(
-        animation: _floatController,
-        builder: (_, __) {
-          return Transform.translate(
-            offset: Offset(0, _mascotFloat.value),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Glow effect
-                AnimatedBuilder(
-                  animation: _glowPulse,
-                  builder: (_, __) {
-                    return Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            (isDark ? AppColors.primaryLight : AppColors.primary)
-                                .withOpacity(0.2 * _glowPulse.value),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                
-                // Main mascot container
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: isDark
-                          ? [const Color(0xFF6366F1), const Color(0xFF8B5CF6)]
-                          : [const Color(0xFF4F46E5), const Color(0xFF7C3AED)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (isDark ? const Color(0xFF6366F1) : const Color(0xFF4F46E5))
-                            .withOpacity(0.4),
-                        blurRadius: 24,
-                        spreadRadius: 4,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.school,
-                    size: 56,
-                    color: Colors.white,
-                  ),
-                ),
-                
-                // Floating sparkles
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Transform.rotate(
-                    angle: math.pi / 4,
-                    child: Icon(
-                      Icons.star,
-                      size: 24,
-                      color: Colors.amber.withOpacity(0.8),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+      child: Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(32),
+        ),
+        child: const Icon(
+          Icons.school,
+          size: 56,
+          color: Colors.white,
+        ),
       ),
     );
   }
@@ -538,14 +395,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [AppColors.secondary.withOpacity(0.2), AppColors.primary.withOpacity(0.2)]
-              : [AppColors.secondary.withOpacity(0.15), AppColors.primary.withOpacity(0.15)],
-        ),
+        color: theme.colorScheme.primaryContainer.withOpacity(isDark ? 0.3 : 0.2),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: (isDark ? AppColors.primaryLight : AppColors.primary).withOpacity(0.3),
+          color: theme.colorScheme.primary.withOpacity(0.2),
         ),
       ),
       child: Row(
@@ -572,33 +425,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildNameInputCard(ThemeData theme, bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isDark
-              ? [
-                  AppColors.surfaceDark.withOpacity(0.8),
-                  AppColors.surfaceDark.withOpacity(0.6),
-                ]
-              : [
-                  Colors.white.withOpacity(0.9),
-                  Colors.white.withOpacity(0.7),
-                ],
-        ),
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: (isDark ? AppColors.dividerDark : AppColors.dividerLight)
-              .withOpacity(0.5),
+          color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
         ),
-        boxShadow: isDark
-            ? [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 20,
-                  spreadRadius: -4,
-                ),
-              ]
-            : AppShadows.cardLight,
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -656,7 +487,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               suffixIcon: _isNameValid
                   ? Container(
                       margin: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Colors.green,
                         shape: BoxShape.circle,
                       ),
@@ -669,8 +500,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   : null,
               filled: true,
               fillColor: isDark
-                  ? AppColors.backgroundDark.withOpacity(0.5)
-                  : AppColors.backgroundLight.withOpacity(0.7),
+                  ? AppColors.backgroundDark
+                  : AppColors.backgroundLight,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -678,8 +509,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
-                  color: (isDark ? AppColors.dividerDark : AppColors.dividerLight)
-                      .withOpacity(0.3),
+                  color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
                 ),
               ),
               focusedBorder: OutlineInputBorder(
@@ -732,29 +562,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 18),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: _isNameValid
-                  ? (isDark
-                      ? [AppColors.primaryLight, const Color(0xFF8B5CF6)]
-                      : [AppColors.primary, const Color(0xFF7C3AED)])
-                  : (isDark
-                      ? [AppColors.surfaceDark, AppColors.surfaceDark]
-                      : [AppColors.surfaceLight, AppColors.surfaceLight]),
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: _isNameValid
+                ? (isDark ? AppColors.primaryLight : AppColors.primary)
+                : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
             borderRadius: BorderRadius.circular(20),
-            boxShadow: _isNameValid
-                ? [
-                    BoxShadow(
-                      color: (isDark ? AppColors.primaryLight : AppColors.primary)
-                          .withOpacity(0.4),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : [],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

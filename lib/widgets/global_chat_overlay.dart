@@ -33,6 +33,7 @@ class _GlobalChatOverlayState extends State<GlobalChatOverlay>
   late Animation<double> _backdropAnimation;
 
   Offset _chatPosition = Offset.zero;
+  Size _chatSize = const Size(300, 400);
 
   @override
   void initState() {
@@ -73,9 +74,10 @@ class _GlobalChatOverlayState extends State<GlobalChatOverlay>
       return;
     }
 
-    // Calculate chat position based on button location
+    // Calculate chat size and position based on screen
     final screenSize = MediaQuery.of(context).size;
-    _chatPosition = _calculateChatPosition(buttonPosition, screenSize);
+    _chatSize = _calculateChatSize(screenSize);
+    _chatPosition = _calculateChatPosition(buttonPosition, screenSize, _chatSize);
 
     provider.openChat();
     _chatController.forward();
@@ -96,36 +98,25 @@ class _GlobalChatOverlayState extends State<GlobalChatOverlay>
     }
   }
 
-  Offset _calculateChatPosition(Offset buttonPos, Size screenSize) {
-    const double chatWidth = 360;
-    const double chatHeight = 500;
-    const double padding = 16;
+  Size _calculateChatSize(Size screenSize) {
+    final double chatWidth = screenSize.width > 400 ? 300 : screenSize.width * 0.88;
+    final double chatHeight = screenSize.height > 700 ? 390 : screenSize.height * 0.56;
+    return Size(chatWidth, chatHeight);
+  }
 
-    // Determine which quadrant the button is in
-    final isLeftSide = buttonPos.dx < screenSize.width / 2;
-    final isTopSide = buttonPos.dy < screenSize.height / 2;
+  Offset _calculateChatPosition(Offset buttonPos, Size screenSize, Size chatSize) {
+    const double padding = 8;
 
-    double x, y;
-
-    // Horizontal positioning
-    if (isLeftSide) {
-      x = padding;
-    } else {
-      x = screenSize.width - chatWidth - padding;
-    }
-
-    // Vertical positioning
-    if (isTopSide) {
-      // Button in top half, open chat below
-      y = buttonPos.dy + 70;
-    } else {
-      // Button in bottom half, open chat above
-      y = buttonPos.dy - chatHeight - 20;
-    }
+    // Always position at right-bottom of screen (ignoring button position)
+    double x = screenSize.width - chatSize.width - padding;
+    double y = screenSize.height - chatSize.height - padding - 80; // 80 for bottom nav
 
     // Clamp to safe area
-    x = x.clamp(padding, screenSize.width - chatWidth - padding);
-    y = y.clamp(100.0, screenSize.height - chatHeight - padding);
+    final maxX = (screenSize.width - chatSize.width - padding).clamp(padding, double.infinity);
+    final maxY = (screenSize.height - chatSize.height - padding - 80).clamp(80.0, double.infinity);
+    
+    x = x.clamp(padding, maxX);
+    y = y.clamp(80.0, maxY);
 
     return Offset(x, y);
   }
@@ -144,6 +135,10 @@ class _GlobalChatOverlayState extends State<GlobalChatOverlay>
 
   @override
   Widget build(BuildContext context) {
+    // Listen to keyboard insets to adjust chat position
+    final viewInsets = MediaQuery.of(context).viewInsets;
+    final keyboardHeight = viewInsets.bottom;
+
     return Consumer<ChatProvider>(
       builder: (context, provider, child) {
         return ValueListenableBuilder<bool>(
@@ -177,16 +172,25 @@ class _GlobalChatOverlayState extends State<GlobalChatOverlay>
                   AnimatedBuilder(
                     animation: _chatAnimation,
                     builder: (context, child) {
+                      // Calculate adjusted position accounting for keyboard
+                      final adjustedY = keyboardHeight > 0
+                          ? (_chatPosition.dy - keyboardHeight + 16).clamp(80.0, double.infinity)
+                          : _chatPosition.dy;
+                      
                       return Positioned(
                         left: _chatPosition.dx,
-                        top: _chatPosition.dy + (1 - _chatAnimation.value) * 50,
+                        top: adjustedY + (1 - _chatAnimation.value) * 50,
                         child: Opacity(
                           opacity: _chatAnimation.value,
                           child: ScaleTransition(
                             scale: Tween<double>(begin: 0.9, end: 1.0).animate(_chatAnimation),
                             child: Material(
                               type: MaterialType.transparency,
-                              child: ChatScreen(onClose: _closeChat),
+                              child: SizedBox(
+                                width: _chatSize.width,
+                                height: _chatSize.height,
+                                child: ChatScreen(onClose: _closeChat),
+                              ),
                             ),
                           ),
                         ),

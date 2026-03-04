@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../services/admob_service.dart';
 import '../services/youtube_api_service.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
@@ -20,6 +22,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  // Banner Ad
+  BannerAd? _bannerAd;
+  bool _isBannerAdLoaded = false;
+
   @override
   void initState() {
     super.initState();
@@ -31,6 +37,37 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       DeviceOrientation.landscapeRight,
     ]);
     _initializePlayer();
+    _loadBannerAd();
+  }
+
+  void _loadBannerAd() {
+    if (_bannerAd != null) return;
+
+    _bannerAd = AdMobService.loadBannerAd(
+      adUnitId: 'ca-app-pub-5721278995377651/6253583275',
+      size: AdSize.banner,
+      onAdLoaded: (ad) {
+        if (mounted) {
+          setState(() {
+            _isBannerAdLoaded = true;
+          });
+        }
+      },
+      onAdFailedToLoad: (error) {
+        if (mounted) {
+          setState(() {
+            _bannerAd = null;
+            _isBannerAdLoaded = false;
+          });
+        }
+      },
+    );
+  }
+
+  void _disposeBannerAd() {
+    AdMobService.disposeBannerAd(_bannerAd);
+    _bannerAd = null;
+    _isBannerAdLoaded = false;
   }
 
   void _initializePlayer() {
@@ -72,6 +109,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   void dispose() {
     _controller.removeListener(_onPlayerStateChange);
     _controller.dispose();
+    _disposeBannerAd();
     // Reset to portrait orientation when leaving the video player
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -310,6 +348,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                             );
                           },
                         ),
+            ),
+
+          // Banner Ad - at bottom of video watch screen
+          if (_isBannerAdLoaded)
+            Container(
+              alignment: Alignment.center,
+              width: _bannerAd!.size.width.toDouble(),
+              height: _bannerAd!.size.height.toDouble(),
+              child: AdWidget(ad: _bannerAd!),
             ),
           ],
         ),

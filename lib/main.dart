@@ -172,10 +172,8 @@ class MyApp extends StatelessWidget {
         onPrimaryContainer: AppColors.primaryDark,
         secondary: AppColors.secondary,
         onSecondary: Colors.white,
-        secondaryContainer: Color(0xFFCCFBF1),
+        secondaryContainer: Color(0xFFF1F5F9),
         onSecondaryContainer: AppColors.secondaryDark,
-        tertiary: AppColors.accentPurple,
-        onTertiary: Colors.white,
         surface: AppColors.surfaceLight,
         onSurface: AppColors.textPrimaryLight,
         onSurfaceVariant: AppColors.textSecondaryLight,
@@ -196,14 +194,14 @@ class MyApp extends StatelessWidget {
         foregroundColor: Colors.white,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         titleTextStyle: const TextStyle(
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.w600,
           color: Colors.white,
-          letterSpacing: 0.5,
+          letterSpacing: 0.3,
         ),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(AppBorderRadius.xl),
+            bottom: Radius.circular(AppBorderRadius.lg),
           ),
         ),
       ),
@@ -263,8 +261,7 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorderRadius.lg)),
-          elevation: 2,
-          shadowColor: AppColors.primary.withValues(alpha: 0.3),
+          elevation: 1,
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
           textStyle: const TextStyle(
             fontSize: 16,
@@ -303,26 +300,16 @@ class MyApp extends StatelessWidget {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        elevation: 4,
+        elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorderRadius.lg)),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceLight,
         selectedColor: AppColors.primary,
         labelStyle: const TextStyle(color: AppColors.textPrimaryLight),
-        secondaryLabelStyle: const TextStyle(color: AppColors.primary),
+        secondaryLabelStyle: const TextStyle(color: Colors.white),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorderRadius.circular)),
-      ),
-      dropdownMenuTheme: DropdownMenuThemeData(
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: AppColors.surfaceLight,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppBorderRadius.lg),
-            borderSide: const BorderSide(color: AppColors.dividerLight),
-          ),
-        ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.surfaceLight,
@@ -334,7 +321,7 @@ class MyApp extends StatelessWidget {
         backgroundColor: AppColors.surfaceDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorderRadius.lg)),
         contentTextStyle: const TextStyle(color: Colors.white),
-        actionTextColor: AppColors.secondaryLight,
+        actionTextColor: AppColors.primaryLight,
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: AppColors.surfaceLight,
@@ -376,14 +363,12 @@ class MyApp extends StatelessWidget {
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primaryLight,
         onPrimary: Colors.white,
-        primaryContainer: Color(0xFF312E81),
+        primaryContainer: Color(0xFF1E3A8A),
         onPrimaryContainer: Colors.white,
         secondary: AppColors.secondaryLight,
         onSecondary: Colors.white,
-        secondaryContainer: Color(0xFF115E59),
+        secondaryContainer: Color(0xFF334155),
         onSecondaryContainer: Colors.white,
-        tertiary: AppColors.accentPurple,
-        onTertiary: Colors.white,
         surface: AppColors.surfaceDark,
         onSurface: AppColors.textPrimaryDark,
         onSurfaceVariant: AppColors.textSecondaryDark,
@@ -404,14 +389,14 @@ class MyApp extends StatelessWidget {
         foregroundColor: Colors.white,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         titleTextStyle: const TextStyle(
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.w600,
           color: Colors.white,
-          letterSpacing: 0.5,
+          letterSpacing: 0.3,
         ),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(AppBorderRadius.xl),
+            bottom: Radius.circular(AppBorderRadius.lg),
           ),
         ),
       ),
@@ -471,8 +456,7 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.md),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorderRadius.lg)),
-          elevation: 2,
-          shadowColor: AppColors.primary.withValues(alpha: 0.3),
+          elevation: 1,
           minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
           textStyle: const TextStyle(
             fontSize: 16,
@@ -511,26 +495,16 @@ class MyApp extends StatelessWidget {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: AppColors.primaryLight,
         foregroundColor: Colors.white,
-        elevation: 4,
+        elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorderRadius.lg)),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceDark,
         selectedColor: AppColors.primary,
         labelStyle: const TextStyle(color: AppColors.textPrimaryDark),
-        secondaryLabelStyle: const TextStyle(color: AppColors.primaryLight),
+        secondaryLabelStyle: const TextStyle(color: Colors.white),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorderRadius.circular)),
-      ),
-      dropdownMenuTheme: DropdownMenuThemeData(
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: AppColors.surfaceDark,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppBorderRadius.lg),
-            borderSide: const BorderSide(color: AppColors.dividerDark),
-          ),
-        ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.surfaceDark,

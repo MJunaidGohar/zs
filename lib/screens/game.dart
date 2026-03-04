@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:io';
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../services/admob_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -120,8 +121,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _initVolumeController();
   }
 
+  // [TEMP] Check if running on web
+  bool get _isWeb => kIsWeb;
+
   // ------------------- CUSTOM AUDIO METHODS -------------------
   Future<void> _loadCustomAudioPath() async {
+    if (_isWeb) return; // [TEMP] File operations not supported on web
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedPath = prefs.getString(_customAudioPrefKey);
@@ -137,6 +142,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _pickCustomMedia() async {
+    if (_isWeb) {
+      // [TEMP] File picker not supported on web
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Custom audio not available in web mode')),
+        );
+      }
+      return;
+    }
     try {
       // Pick audio file only
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -209,6 +223,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   String _getFileName(String path) {
+    if (_isWeb) return path; // [TEMP] No path separator on web
     return path.split(Platform.pathSeparator).last;
   }
 
@@ -329,8 +344,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       // Stop any current playback first
       await _audioPlayer!.stop();
 
-      // Play custom audio if available
-      if (_customAudioPath != null && File(_customAudioPath!).existsSync()) {
+      // Play custom audio if available (not on web)
+      if (!_isWeb && _customAudioPath != null && File(_customAudioPath!).existsSync()) {
         await _audioPlayer!.play(DeviceFileSource(_customAudioPath!));
         _isMusicPlaying = true;
       } else {

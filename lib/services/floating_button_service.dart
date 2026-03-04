@@ -44,16 +44,22 @@ class FloatingButtonService {
       return ButtonPosition.defaultPosition(screenWidth, screenHeight);
     }
     
-    final savedPosition = _box!.get(_positionKey);
-    if (savedPosition != null) {
-      // Validate position is within screen bounds (with some tolerance)
-      final validatedX = savedPosition.x.clamp(0.0, screenWidth - 60);
-      final validatedY = savedPosition.y.clamp(100.0, screenHeight - 100);
-      
-      return savedPosition.copyWith(
-        x: validatedX,
-        y: validatedY,
-      );
+    try {
+      final savedPosition = _box!.get(_positionKey);
+      if (savedPosition != null) {
+        // Validate position is within screen bounds (with some tolerance)
+        final validatedX = savedPosition.x.clamp(0.0, screenWidth - 60);
+        final validatedY = savedPosition.y.clamp(100.0, screenHeight - 100);
+        
+        return savedPosition.copyWith(
+          x: validatedX,
+          y: validatedY,
+        );
+      }
+    } catch (e) {
+      debugPrint('ButtonPosition read error (corrupted data?): $e');
+      // Clear corrupted data
+      _box!.delete(_positionKey);
     }
     
     return ButtonPosition.defaultPosition(screenWidth, screenHeight);
