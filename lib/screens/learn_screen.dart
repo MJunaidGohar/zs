@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import '../models/question.dart';
 import '../services/question_service.dart';
 import '../services/progress_service.dart';
 import '../widgets/top_bar_scaffold.dart';
 import '../utils/app_theme.dart';
+import '../utils/text_direction_helper.dart';
+import '../l10n/app_localizations.dart';
 import 'dart:math';
 
 
@@ -77,18 +80,22 @@ class _LearnScreenState extends State<LearnScreen> {
     }
   }
 
+  void _markCompleteIfNeeded() async {
+    if (!_markedComplete) {
+      _markedComplete = true;
+      await ProgressService().saveUnitProgress(_unitKey, true);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).unitCompleted)),
+      );
+    }
+  }
+
   void _onScrollEnd() async {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 50) {
-      if (!_markedComplete) {
-        _markedComplete = true;
-        await ProgressService().saveUnitProgress(_unitKey, true);
-
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unit is completed!')),
-        );
-      }
+      _markCompleteIfNeeded();
     }
   }
 
@@ -141,7 +148,7 @@ class _LearnScreenState extends State<LearnScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  'Loading study material...',
+                  AppLocalizations.of(context).loadingStudyMaterial,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                     fontWeight: FontWeight.w500,
@@ -156,7 +163,7 @@ class _LearnScreenState extends State<LearnScreen> {
 
     if (_shortQuestions.isEmpty) {
       return TopBarScaffold(
-        title: 'Learn Mode',
+        title: AppLocalizations.of(context).learnMode,
         body: Container(
           decoration: BoxDecoration(
             gradient: isDark
@@ -192,7 +199,7 @@ class _LearnScreenState extends State<LearnScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  'No study material available',
+                  AppLocalizations.of(context).noStudyMaterialAvailable,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -200,7 +207,7 @@ class _LearnScreenState extends State<LearnScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Check back later for new content',
+                  AppLocalizations.of(context).checkBackLater,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
                   ),
@@ -237,7 +244,7 @@ class _LearnScreenState extends State<LearnScreen> {
             final question = _shortQuestions[index];
             final bool isLast = index == _shortQuestions.length - 1;
             
-            return TweenAnimationBuilder<double>(
+            Widget questionCard = TweenAnimationBuilder<double>(
               duration: Duration(milliseconds: 400 + (index * 50)),
               tween: Tween(begin: 0, end: 1),
               curve: Curves.easeOutBack,
@@ -255,6 +262,21 @@ class _LearnScreenState extends State<LearnScreen> {
               },
               child: _buildQuestionCard(context, question, index, isLast, isDark, theme),
             );
+
+            // Wrap last question with VisibilityDetector for short lists
+            if (isLast) {
+              return VisibilityDetector(
+                key: Key('last_question_$_unitKey'),
+                onVisibilityChanged: (info) {
+                  if (info.visibleFraction > 0.5) {
+                    _markCompleteIfNeeded();
+                  }
+                },
+                child: questionCard,
+              );
+            }
+            
+            return questionCard;
           },
         ),
       ),
@@ -336,7 +358,7 @@ class _LearnScreenState extends State<LearnScreen> {
                     ),
                   ),
                   child: Text(
-                    'Q${index + 1}',
+                    "Q${index + 1}",
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
@@ -352,6 +374,7 @@ class _LearnScreenState extends State<LearnScreen> {
                       height: 1.4,
                       color: Colors.white,
                     ),
+                    textDirection: TextDirectionHelper.getTextDirection(question.questionText),
                   ),
                 ),
               ],
@@ -394,7 +417,7 @@ class _LearnScreenState extends State<LearnScreen> {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Text(
-                      'Answer',
+                      AppLocalizations.of(context).answer,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: isDark ? AppColors.accentYellow : AppColors.accentOrange,
                         fontWeight: FontWeight.w600,
@@ -417,11 +440,12 @@ class _LearnScreenState extends State<LearnScreen> {
                     ),
                   ),
                   child: Text(
-                    question.answer ?? "No answer available",
+                    question.answer ?? AppLocalizations.of(context).noAnswerAvailable,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       height: 1.6,
                       color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                     ),
+                    textDirection: TextDirectionHelper.getTextDirection(question.answer ?? ''),
                   ),
                 ),
               ],
@@ -460,7 +484,7 @@ class _LearnScreenState extends State<LearnScreen> {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
-                    'End of study material - Scroll to complete!',
+                    AppLocalizations.of(context).endOfStudyMaterial,
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: AppColors.success,
                       fontWeight: FontWeight.w600,

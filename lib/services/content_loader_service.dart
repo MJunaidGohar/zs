@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/material.dart';
 import '../models/question.dart';
 import 'google_sheets_content_service.dart';
+import '../providers/language_provider.dart';
 
 /// Service to load content from various sources
 /// 
@@ -68,6 +70,8 @@ class ContentLoaderService {
   }
 
   /// Generic question loader with fallback logic
+  /// For Urdu: Tries Google Sheets first, then local assets
+  /// For English: Tries local assets first, then Google Sheets
   Future<List<Question>> _loadQuestions({
     required String topic,
     required String level,
@@ -78,7 +82,39 @@ class ContentLoaderService {
     final normalizedLevel = level.toLowerCase().replaceAll(' ', '_');
     final normalizedSubtopic = subtopic.toLowerCase().replaceAll(' ', '_');
 
-    // Try JSON first (fastest, production format)
+    // Check current language
+    final isUrdu = LanguageProvider.currentLocale?.languageCode == 'ur' ?? false;
+
+    if (isUrdu) {
+      // For Urdu: Try Google Sheets first (contains Urdu content)
+      debugPrint('ContentLoader: Urdu mode - trying Google Sheets first');
+      if (type == 'study') {
+        final sheetsQuestions = await _sheetsService.loadStudyQuestions(
+          topic: topic,
+          level: level,
+          subtopic: subtopic,
+        );
+        if (sheetsQuestions.isNotEmpty) {
+          debugPrint('ContentLoader: Loaded ${sheetsQuestions.length} study questions from Google Sheets');
+          return sheetsQuestions;
+        }
+      } else {
+        final sheetsQuestions = await _sheetsService.loadTestQuestions(
+          topic: topic,
+          level: level,
+          subtopic: subtopic,
+        );
+        if (sheetsQuestions.isNotEmpty) {
+          debugPrint('ContentLoader: Loaded ${sheetsQuestions.length} test questions from Google Sheets');
+          return sheetsQuestions;
+        }
+      }
+      
+      // Fallback to local assets if Google Sheets has no content
+      debugPrint('ContentLoader: Google Sheets empty, falling back to local assets');
+    }
+
+    // Try JSON first (fastest, production format) - for English or fallback
     final jsonPath = 'assets/content/$normalizedTopic/$normalizedLevel/$normalizedSubtopic/$type.json';
     final jsonQuestions = await _tryLoadJson(jsonPath, topic: topic, level: level, subtopic: subtopic);
     if (jsonQuestions != null && jsonQuestions.isNotEmpty) {
@@ -92,24 +128,26 @@ class ContentLoaderService {
       return csvQuestions;
     }
 
-    // Fallback 2: Try Google Sheets at runtime
-    if (type == 'study') {
-      final sheetsQuestions = await _sheetsService.loadStudyQuestions(
-        topic: topic,
-        level: level,
-        subtopic: subtopic,
-      );
-      if (sheetsQuestions.isNotEmpty) {
-        return sheetsQuestions;
-      }
-    } else {
-      final sheetsQuestions = await _sheetsService.loadTestQuestions(
-        topic: topic,
-        level: level,
-        subtopic: subtopic,
-      );
-      if (sheetsQuestions.isNotEmpty) {
-        return sheetsQuestions;
+    // For English: Try Google Sheets as last resort
+    if (!isUrdu) {
+      if (type == 'study') {
+        final sheetsQuestions = await _sheetsService.loadStudyQuestions(
+          topic: topic,
+          level: level,
+          subtopic: subtopic,
+        );
+        if (sheetsQuestions.isNotEmpty) {
+          return sheetsQuestions;
+        }
+      } else {
+        final sheetsQuestions = await _sheetsService.loadTestQuestions(
+          topic: topic,
+          level: level,
+          subtopic: subtopic,
+        );
+        if (sheetsQuestions.isNotEmpty) {
+          return sheetsQuestions;
+        }
       }
     }
 

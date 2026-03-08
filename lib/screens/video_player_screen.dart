@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../l10n/app_localizations.dart';
 import '../services/admob_service.dart';
 import '../services/youtube_api_service.dart';
 
@@ -120,6 +121,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -149,7 +151,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   ),
                   Expanded(
                     child: Text(
-                      'Now Playing',
+                      l10n.nowPlaying,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -161,8 +163,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               ),
             ),
 
-            // Video Player
+            // Video Player - wrapped in Expanded to prevent overflow
             Expanded(
+              flex: 3,
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _errorMessage != null
@@ -197,8 +200,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                   child: player,
                                 ),
 
-                                // Video Info
-                                Expanded(
+                                // Video Info - use Flexible instead of Expanded
+                                Flexible(
                                   child: SingleChildScrollView(
                                     padding: const EdgeInsets.all(16),
                                     child: Column(
@@ -240,7 +243,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                                     ),
                                                   ),
                                                   Text(
-                                                    'YouTube Channel',
+                                                    l10n.youtubeChannel,
                                                     style: theme.textTheme.bodySmall?.copyWith(
                                                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                                                     ),
@@ -257,7 +260,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
                                         // Description
                                         Text(
-                                          'Description',
+                                          l10n.description,
                                           style: theme.textTheme.titleMedium?.copyWith(
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -266,7 +269,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                         Text(
                                           widget.video.description.isNotEmpty
                                               ? widget.video.description
-                                              : 'No description available.',
+                                              : l10n.noDescriptionAvailable,
                                           style: theme.textTheme.bodyMedium,
                                         ),
 
@@ -285,53 +288,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                                             children: [
                                               Icon(
                                                 Icons.info_outline,
-                                                size: 14,
-                                                color: theme.colorScheme.primary,
+                                                size: 16,
+                                                color: isDark ? Colors.grey[400] : Colors.grey[600],
                                               ),
                                               const SizedBox(width: 8),
                                               Expanded(
                                                 child: Text(
-                                                  'Use YouTube controls for playback. Captions available if provided.',
-                                                  style: theme.textTheme.bodySmall?.copyWith(
-                                                    fontSize: 11,
-                                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-
-                                        const SizedBox(height: 12),
-
-                                        // Compact YouTube Terms Notice
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: isDark
-                                                ? const Color(0xFF2D1F1F)
-                                                : const Color(0xFFFFF5F5),
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: isDark
-                                                  ? Colors.red.withValues(alpha: 0.3)
-                                                  : Colors.red.withValues(alpha: 0.2),
-                                            ),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.play_circle_outline,
-                                                size: 14,
-                                                color: Colors.red[400],
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  'Content from YouTube. Subject to YouTube Terms of Service.',
-                                                  style: theme.textTheme.bodySmall?.copyWith(
-                                                    fontSize: 11,
-                                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                                  l10n.useYouTubeControls,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: isDark ? Colors.grey[400] : Colors.grey[600],
                                                   ),
                                                 ),
                                               ),
@@ -350,14 +316,35 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                         ),
             ),
 
-          // Banner Ad - at bottom of video watch screen
-          if (_isBannerAdLoaded)
-            Container(
-              alignment: Alignment.center,
-              width: _bannerAd!.size.width.toDouble(),
-              height: _bannerAd!.size.height.toDouble(),
-              child: AdWidget(ad: _bannerAd!),
-            ),
+          // Banner Ad - fixed height to prevent overflow
+          Container(
+            alignment: Alignment.center,
+            width: double.infinity,
+            height: _isBannerAdLoaded && _bannerAd != null
+                ? _bannerAd!.size.height.toDouble()
+                : 50,
+            color: isDark ? Colors.grey[900] : Colors.grey[200],
+            child: _isBannerAdLoaded && _bannerAd != null
+                ? AdWidget(ad: _bannerAd!)
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.visibility_off,
+                        size: 16,
+                        color: isDark ? Colors.grey[600] : Colors.grey[400],
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        l10n.adLoading,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.grey[600] : Colors.grey[400],
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
           ],
         ),
       ),
@@ -366,6 +353,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   Widget _buildErrorWidget() {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Padding(
@@ -380,7 +368,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Error Loading Video',
+              l10n.errorLoadingVideo,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -401,7 +389,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 _initializePlayer();
               },
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(l10n.retry),
             ),
           ],
         ),

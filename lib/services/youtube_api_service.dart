@@ -156,6 +156,13 @@ class YoutubeApiService {
     int maxResults = 20,
     String? pageToken,
   }) async {
+    // Check if API key is configured
+    if (!isApiKeyConfigured()) {
+      throw Exception(
+        'YouTube API key not configured. Please set YOUTUBE_API_KEY environment variable during build.',
+      );
+    }
+
     // Validate and enhance query with domain context
     final validatedQuery = validateQuery(query);
     if (validatedQuery == null || validatedQuery.trim().isEmpty) {

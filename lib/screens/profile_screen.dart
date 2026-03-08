@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../providers/user_provider.dart';
+import '../providers/language_provider.dart';
+import '../l10n/app_localizations.dart';
 import '../services/attempt_service.dart';
 import '../services/progress_service.dart';
 import '../services/wrong_questions_service.dart';
@@ -216,7 +218,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             if (type == 'learning') {
               if (learningMap.isEmpty) {
-                content = Center(child: Text('No study progress found', style: theme.textTheme.bodyLarge));
+                content = Center(child: Text(AppLocalizations.of(context).noStudyProgressFound, style: theme.textTheme.bodyLarge));
               } else {
                 content = ListView(
                   controller: scrollController,
@@ -273,7 +275,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }
             } else if (type == 'test') {
               if (testMap.isEmpty) {
-                content = Center(child: Text('No test progress found', style: theme.textTheme.bodyLarge));
+                content = Center(child: Text(AppLocalizations.of(context).noTestProgressFound, style: theme.textTheme.bodyLarge));
               } else {
                 content = ListView(
                   controller: scrollController,
@@ -333,7 +335,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }
             } else {
               if (wrongAttemptsMap.isEmpty) {
-                content = Center(child: Text('No wrong attempts to retry', style: theme.textTheme.bodyLarge));
+                content = Center(child: Text(AppLocalizations.of(context).noWrongAttempts, style: theme.textTheme.bodyLarge));
               } else {
                 content = ListView(
                   controller: scrollController,
@@ -372,7 +374,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             padding: const EdgeInsets.symmetric(horizontal: 8),
                                             minimumSize: const Size(80, 36),
                                           ),
-                                          child: const Text("Retry", style: TextStyle(fontSize: 12)),
+                                          child: Text(AppLocalizations.of(context).retry, style: TextStyle(fontSize: 12)),
                                         ),
                                       ),
                                     ),
@@ -580,7 +582,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  'Loading profile...',
+                  AppLocalizations.of(context).loadingProfile,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                     fontWeight: FontWeight.w500,
@@ -595,7 +597,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Personal Profile"),
+        title: Text(AppLocalizations.of(context).personalProfile),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: BoxDecoration(
@@ -666,7 +668,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Expanded(
                       child: _buildEnhancedProgressCard(
                         context,
-                        title: 'Study Progress',
+                        title: AppLocalizations.of(context).studyProgress,
                         icon: Icons.menu_book,
                         color: AppColors.accentBlue,
                         progress: _computeLearningProgress(),
@@ -677,7 +679,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Expanded(
                       child: _buildEnhancedProgressCard(
                         context,
-                        title: 'Test Progress',
+                        title: AppLocalizations.of(context).testProgress,
                         icon: Icons.quiz,
                         color: AppColors.accentPurple,
                         progress: _computeTestProgress(),
@@ -706,8 +708,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
                 child: _buildEnhancedActionCard(
                   context,
-                  title: 'Retry Wrong Tests',
-                  subtitle: 'Practice questions you got wrong',
+                  title: AppLocalizations.of(context).retryWrongTests,
+                  subtitle: AppLocalizations.of(context).practiceQuestionsWrong,
                   icon: Icons.refresh,
                   color: AppColors.accentOrange,
                   onTap: () => _showBottomSheet('retry'),
@@ -736,7 +738,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Expanded(
                       child: _buildEnhancedSquareCard(
                         context,
-                        title: 'Game Time',
+                        title: AppLocalizations.of(context).gameTime,
                         icon: Icons.videogame_asset,
                         color: AppColors.accentPink,
                         onTap: () {
@@ -751,7 +753,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Expanded(
                       child: _buildEnhancedSquareCard(
                         context,
-                        title: 'Watch Videos',
+                        title: AppLocalizations.of(context).watchVideos,
                         icon: Icons.play_circle_fill,
                         color: AppColors.accentBlue,
                         onTap: () {
@@ -889,12 +891,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      userProvider.userName ?? 'Guest',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            userProvider.userName ?? 'Guest',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => _showEditNameDialog(context, userProvider),
+                          child: Container(
+                            padding: const EdgeInsets.all(AppSpacing.xs),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(AppBorderRadius.circular),
+                            ),
+                            child: Icon(
+                              Icons.edit,
+                              color: Colors.white.withValues(alpha: 0.9),
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Container(
@@ -991,6 +1014,275 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Language Selector Badge
+          Consumer<LanguageProvider>(
+            builder: (context, languageProvider, child) {
+              return GestureDetector(
+                onTap: () => _showLanguageSelector(context, languageProvider),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.language,
+                        color: Colors.white.withValues(alpha: 0.9),
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        'Language: ',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      Text(
+                        languageProvider.currentLanguageName,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Icon(
+                        Icons.arrow_drop_down,
+                        color: Colors.white.withValues(alpha: 0.6),
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLanguageSelector(BuildContext context, LanguageProvider languageProvider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+        
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppBorderRadius.xxl)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: AppSpacing.md),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+                  borderRadius: BorderRadius.circular(AppBorderRadius.circular),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              // Title
+              Text(
+                'Select Language',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              const Divider(),
+              // Language options
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: languageProvider.currentLanguageCode == 'en'
+                        ? AppColors.primary.withValues(alpha: 0.1)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppBorderRadius.md),
+                  ),
+                  child: Icon(
+                    Icons.language,
+                    color: languageProvider.currentLanguageCode == 'en'
+                        ? AppColors.primary
+                        : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                  ),
+                ),
+                title: Text(
+                  'English',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: languageProvider.currentLanguageCode == 'en'
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+                trailing: languageProvider.currentLanguageCode == 'en'
+                    ? Icon(Icons.check_circle, color: AppColors.primary)
+                    : null,
+                onTap: () {
+                  languageProvider.setEnglish();
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: languageProvider.currentLanguageCode == 'ur'
+                        ? AppColors.primary.withValues(alpha: 0.1)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppBorderRadius.md),
+                  ),
+                  child: Icon(
+                    Icons.language,
+                    color: languageProvider.currentLanguageCode == 'ur'
+                        ? AppColors.primary
+                        : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                  ),
+                ),
+                title: Text(
+                  'اردو',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: languageProvider.currentLanguageCode == 'ur'
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+                trailing: languageProvider.currentLanguageCode == 'ur'
+                    ? Icon(Icons.check_circle, color: AppColors.primary)
+                    : null,
+                onTap: () {
+                  languageProvider.setUrdu();
+                  Navigator.pop(context);
+                },
+              ),
+              const SizedBox(height: AppSpacing.xl),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showEditNameDialog(BuildContext context, UserProvider userProvider) {
+    final TextEditingController nameController = TextEditingController(
+      text: userProvider.userName ?? '',
+    );
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppBorderRadius.xl),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.person_outline,
+              color: isDark ? AppColors.primaryLight : AppColors.primary,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              AppLocalizations.of(context).editName,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: TextField(
+          controller: nameController,
+          textCapitalization: TextCapitalization.words,
+          maxLength: 20,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
+          decoration: InputDecoration(
+            hintText: AppLocalizations.of(context).enterYourName,
+            counterText: '',
+            filled: true,
+            fillColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+              borderSide: BorderSide(
+                color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+              borderSide: BorderSide(
+                color: isDark ? AppColors.primaryLight : AppColors.primary,
+                width: 2,
+              ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              AppLocalizations.of(context).cancel,
+              style: TextStyle(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newName = nameController.text.trim();
+              if (newName.isNotEmpty && newName.length >= 2) {
+                await userProvider.setUserName(newName);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(AppLocalizations.of(context).nameUpdatedSuccessfully),
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+                      ),
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? AppColors.primaryLight : AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppBorderRadius.lg),
+              ),
+            ),
+            child: Text(AppLocalizations.of(context).save),
           ),
         ],
       ),

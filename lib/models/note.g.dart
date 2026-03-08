@@ -1,38 +1,47 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'button_position.dart';
+part of 'note.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class ButtonPositionAdapter extends TypeAdapter<ButtonPosition> {
+class NoteAdapter extends TypeAdapter<Note> {
   @override
-  final int typeId = 20;
+  final int typeId = 3;
 
   @override
-  ButtonPosition read(BinaryReader reader) {
+  Note read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return ButtonPosition(
-      x: fields[0] as double,
-      y: fields[1] as double,
-      lastUpdated: fields[2] as DateTime?,
+    return Note(
+      id: fields[0] as String,
+      title: fields[1] as String,
+      content: fields[2] as String,
+      createdAt: fields[3] as DateTime,
+      updatedAt: fields[4] as DateTime,
+      isPinned: fields[5] as bool,
     );
   }
 
   @override
-  void write(BinaryWriter writer, ButtonPosition obj) {
+  void write(BinaryWriter writer, Note obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(6)
       ..writeByte(0)
-      ..write(obj.x)
+      ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.y)
+      ..write(obj.title)
       ..writeByte(2)
-      ..write(obj.lastUpdated);
+      ..write(obj.content)
+      ..writeByte(3)
+      ..write(obj.createdAt)
+      ..writeByte(4)
+      ..write(obj.updatedAt)
+      ..writeByte(5)
+      ..write(obj.isPinned);
   }
 
   @override
@@ -41,7 +50,7 @@ class ButtonPositionAdapter extends TypeAdapter<ButtonPosition> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ButtonPositionAdapter &&
+      other is NoteAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

@@ -4,6 +4,8 @@ import 'dart:io';
 import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 import '../services/admob_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,79 +16,159 @@ import 'package:file_picker/file_picker.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
+
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
 
+// Block piece definition with shape and color
+class BlockPiece {
+  final List<List<int>> shape;
+  final int colorIndex;
+  final String id;
+
+  BlockPiece({
+    required this.shape,
+    required this.colorIndex,
+    required this.id,
+  });
+
+  int get width => shape[0].length;
+  int get height => shape.length;
+
+  List<Point<int>> get occupiedCells {
+    final cells = <Point<int>>[];
+    for (int r = 0; r < shape.length; r++) {
+      for (int c = 0; c < shape[r].length; c++) {
+        if (shape[r][c] == 1) {
+          cells.add(Point(r, c));
+        }
+      }
+    }
+    return cells;
+  }
+
+  BlockPiece rotated() {
+    final newShape = List.generate(
+      width,
+      (r) => List.generate(height, (c) => 0),
+    );
+    for (int r = 0; r < height; r++) {
+      for (int c = 0; c < width; c++) {
+        if (shape[r][c] == 1) {
+          newShape[c][height - 1 - r] = 1;
+        }
+      }
+    }
+    return BlockPiece(
+      shape: newShape,
+      colorIndex: colorIndex,
+      id: '${id}_rotated',
+    );
+  }
+}
+
+class PieceShapes {
+  static final List<List<List<int>>> all = [
+    [[1]],
+    [[1, 1]],
+    [[1, 1, 1]],
+    [[1, 0], [1, 1]],
+    [[1, 1, 1, 1]],
+    [[1, 1], [1, 1]],
+    [[1, 1, 1], [0, 1, 0]],
+    [[1, 0, 0], [1, 1, 1]],
+    [[0, 0, 1], [1, 1, 1]],
+    [[0, 1, 1], [1, 1, 0]],
+    [[1, 1, 0], [0, 1, 1]],
+  ];
+
+  static BlockPiece random(Random random, int colorIndex) {
+    final shape = all[random.nextInt(all.length)];
+    return BlockPiece(
+      shape: shape,
+      colorIndex: colorIndex,
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+    );
+  }
+}
+
 class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
-  // ------------------- BACKGROUND MUSIC -------------------
   AudioPlayer? _audioPlayer;
   bool _isMusicPlaying = false;
-  bool _isMusicEnabled = true; // Toggle for music on/off
-  String? _customAudioPath; // Path to user-selected custom audio
+  bool _isMusicEnabled = true;
+  String? _customAudioPath;
   static const String _customAudioPrefKey = 'custom_audio_path';
 
-  // ------------------- ADS -------------------
   InterstitialAd? _interstitialAd;
   bool _adShown = false;
-  int _lastAdTriggerCombo = 0; // Track last combo milestone when ad was shown
+  int _lastAdTriggerScore = 0;
 
-  // ------------------- GRID CONFIG -------------------
-  static const int gridRows = 8;
-  int gridCols = 6;
-  late List<List<int>> grid;
+  static const int gridSize = 8;
+  late List<List<int?>> grid;
   final Random _random = Random();
 
-  // ------------------- EMOJI THEMES -------------------
   static const String _themePrefKey = 'game_theme';
-  String _currentTheme = 'fruits'; // 'fruits' or 'emojis'
+  String _currentTheme = 'fruits';
   bool _showThemeDialog = false;
 
-  final List<String> _fruitEmojis = [
-    "🍎", "🍌", "🍇", "🍊", "🍓", "🍉", "🍑", "🍒"
+  final List<BlockPiece?> _availablePieces = [null, null, null];
+  BlockPiece? _draggedPiece;
+  int? _draggedPieceIndex;
+  Point<int>? _previewPosition;
+  bool _isValidPlacement = false;
+
+  final List<Color> _fruitColors = [
+    const Color(0xFFFF6B6B),
+    const Color(0xFFFFE66D),
+    const Color(0xFF9B59B6),
+    const Color(0xFFFF8C42),
+    const Color(0xFFFF1744),
+    const Color(0xFF00BCD4),
+    const Color(0xFFFFA07A),
+    const Color(0xFFC0392B),
   ];
 
-  // Popular social media emojis - most commonly used and attractive
-  final List<String> _socialEmojis = [
-    "😂", "❤️", "🔥", "😍", "🥰", "👍", "🎉", "😎"
+  final List<Color> _socialColors = [
+    const Color(0xFFFFD700),
+    const Color(0xFFE91E63),
+    const Color(0xFFFF5722),
+    const Color(0xFF9C27B0),
+    const Color(0xFFFF4081),
+    const Color(0xFF4CAF50),
+    const Color(0xFF2196F3),
+    const Color(0xFF607D8B),
   ];
 
-  List<String> get emojis => _currentTheme == 'fruits' ? _fruitEmojis : _socialEmojis;
+  List<Color> get blockColors => _currentTheme == 'fruits' ? _fruitColors : _socialColors;
 
-  // ------------------- SCORE / COMBO -------------------
   final ValueNotifier<int> scoreNotifier = ValueNotifier<int>(0);
-  int combo = 0;
-  int _lastVibratedMilestone = 0; // Track last 1000-point milestone vibrated
+  int _combo = 0;
+  int _linesCleared = 0;
+  int _lastVibratedMilestone = 0;
+  int _highScore = 0;
+  static const String _highScorePrefKey = 'block_blast_high_score';
 
-  // ------------------- SELECTION -------------------
-  int? selR, selC;
+  bool _gameOver = false;
+  bool _showGameOverDialog = false;
+  bool _isProcessing = false;
 
-  // ------------------- STUCK BOARD HANDLING -------------------
-  bool _stuckNotified = false;
+  late final AnimationController _lineClearController;
+  late final AnimationController _piecePlaceController;
+  late final AnimationController _backgroundController;
+  late final List<AnimationController> _pieceBounceControllers;
 
-  Timer? _idleHintTimer;
-  Point<int>? _hintA;
-  Point<int>? _hintB;
-  late final AnimationController _hintPulseController;
+  final Set<int> _clearingRows = {};
+  final Set<int> _clearingCols = {};
 
-  // ------------------- CASCADE CONTROL -------------------
-  int _cascadeDepth = 0;
-  static const int _cascadeDepthLimit = 30;
-
-  // ------------------- EFFECTS -------------------
-  final List<_Effect> _effects = [];
   final List<_Particle> _particles = [];
-  static const int _maxEffects = 50;
+  late final AnimationController _particleController;
 
-  // ------------------- TUTORIAL -------------------
   bool _showTutorial = false;
   int _tutorialStep = 0;
   late final AnimationController _tutorialController;
   late final AnimationController _handSwipeController;
-  late final AnimationController _backgroundController;
-  late final AnimationController _particleController;
 
-  // ------------------- VOLUME CONTROL -------------------
   final VolumeController _volumeController = VolumeController();
   double _currentVolume = 0.5;
   StreamSubscription<double>? _volumeListener;
@@ -94,9 +176,22 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _hintPulseController = AnimationController(
+
+    _lineClearController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 400),
+    );
+    _piecePlaceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _backgroundController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat();
+    _particleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
     );
     _tutorialController = AnimationController(
       vsync: this,
@@ -106,31 +201,31 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    _backgroundController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat();
-    _particleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
+
+    _pieceBounceControllers = List.generate(
+      3,
+      (i) => AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 600),
+      ),
     );
+
+    _initGame();
     _loadThemeAndInit();
-    // Removed: _loadAd() - now shows at 100 score milestone instead
-    _loadCustomAudioPath(); // Load saved custom audio path
+    _loadHighScore();
+    _loadCustomAudioPath();
     _initAudioPlayer();
     _initVolumeController();
   }
 
-  // [TEMP] Check if running on web
   bool get _isWeb => kIsWeb;
 
-  // ------------------- CUSTOM AUDIO METHODS -------------------
   Future<void> _loadCustomAudioPath() async {
-    if (_isWeb) return; // [TEMP] File operations not supported on web
+    if (_isWeb) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedPath = prefs.getString(_customAudioPrefKey);
-      
+
       if (savedPath != null && File(savedPath).existsSync()) {
         setState(() {
           _customAudioPath = savedPath;
@@ -143,7 +238,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Future<void> _pickCustomMedia() async {
     if (_isWeb) {
-      // [TEMP] File picker not supported on web
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Custom audio not available in web mode')),
@@ -152,7 +246,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       return;
     }
     try {
-      // Pick audio file only
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.audio,
         allowMultiple: false,
@@ -160,8 +253,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
       if (result != null && result.files.single.path != null) {
         final selectedPath = result.files.single.path!;
-        
-        // Verify file exists
+
         if (!File(selectedPath).existsSync()) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -171,7 +263,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           return;
         }
 
-        // Save to preferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_customAudioPrefKey, selectedPath);
 
@@ -179,7 +270,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           _customAudioPath = selectedPath;
         });
 
-        // Restart music with new file
         await _stopBackgroundMusic();
         await _playBackgroundMusic();
 
@@ -203,12 +293,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_customAudioPrefKey);
-      
+
       setState(() {
         _customAudioPath = null;
       });
 
-      // Restart music to use default
       await _stopBackgroundMusic();
       await _playBackgroundMusic();
 
@@ -223,7 +312,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   String _getFileName(String path) {
-    if (_isWeb) return path; // [TEMP] No path separator on web
+    if (_isWeb) return path;
     return path.split(Platform.pathSeparator).last;
   }
 
@@ -293,46 +382,31 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       ),
     );
   }
+
   void _initVolumeController() {
-    // Get current volume
     _volumeController.getVolume().then((volume) {
       setState(() {
         _currentVolume = volume;
       });
     });
 
-    // Listen to volume changes from hardware buttons
     _volumeListener = _volumeController.listener((volume) {
       setState(() {
         _currentVolume = volume;
       });
-      
-      // Update audio player volume if music is playing
+
       if (_audioPlayer != null && _isMusicEnabled) {
         _audioPlayer!.setVolume(volume);
       }
     });
   }
 
-  void _setVolume(double volume) {
-    _volumeController.setVolume(volume);
-    setState(() {
-      _currentVolume = volume;
-    });
-  }
-
-  // ------------------- AUDIO PLAYER METHODS -------------------
   Future<void> _initAudioPlayer() async {
     try {
       _audioPlayer = AudioPlayer();
-      
-      // Set to loop mode for continuous background music
       await _audioPlayer!.setReleaseMode(ReleaseMode.loop);
-      
-      // Load and play background music
       await _playBackgroundMusic();
     } catch (e) {
-      // Silently handle audio initialization errors
       debugPrint('Audio player initialization error: $e');
     }
   }
@@ -341,16 +415,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     if (_audioPlayer == null || !_isMusicEnabled) return;
 
     try {
-      // Stop any current playback first
       await _audioPlayer!.stop();
 
-      // Play custom audio if available (not on web)
       if (!_isWeb && _customAudioPath != null && File(_customAudioPath!).existsSync()) {
         await _audioPlayer!.play(DeviceFileSource(_customAudioPath!));
         _isMusicPlaying = true;
       } else {
-        // No custom audio available - prepared for default music
-        // Play from assets when available
         _isMusicPlaying = true;
       }
     } catch (e) {
@@ -362,7 +432,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     setState(() {
       _isMusicEnabled = !_isMusicEnabled;
     });
-    
+
     if (_isMusicEnabled) {
       await _resumeBackgroundMusic();
     } else {
@@ -372,7 +442,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Future<void> _pauseBackgroundMusic() async {
     if (_audioPlayer == null || !_isMusicPlaying) return;
-    
+
     try {
       await _audioPlayer!.pause();
       _isMusicPlaying = false;
@@ -383,7 +453,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Future<void> _resumeBackgroundMusic() async {
     if (_audioPlayer == null) return;
-    
+
     try {
       await _audioPlayer!.resume();
       _isMusicPlaying = true;
@@ -394,7 +464,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Future<void> _stopBackgroundMusic() async {
     if (_audioPlayer == null) return;
-    
+
     try {
       await _audioPlayer!.stop();
       _isMusicPlaying = false;
@@ -405,7 +475,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Future<void> _disposeAudioPlayer() async {
     if (_audioPlayer == null) return;
-    
+
     try {
       await _audioPlayer!.dispose();
       _audioPlayer = null;
@@ -418,11 +488,25 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Future<void> _loadThemeAndInit() async {
     final prefs = await SharedPreferences.getInstance();
     final savedTheme = prefs.getString(_themePrefKey);
-    // Load saved theme as default, or use 'fruits' if no saved theme
     setState(() {
       _currentTheme = savedTheme ?? 'fruits';
-      _showThemeDialog = true; // Always show dialog every time
+      _showThemeDialog = true;
     });
+  }
+
+  Future<void> _loadHighScore() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _highScore = prefs.getInt(_highScorePrefKey) ?? 0;
+    });
+  }
+
+  Future<void> _saveHighScore() async {
+    if (scoreNotifier.value > _highScore) {
+      _highScore = scoreNotifier.value;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_highScorePrefKey, _highScore);
+    }
   }
 
   Future<void> _saveTheme(String theme) async {
@@ -432,23 +516,19 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Future<void> _checkFirstTimeTutorial() async {
     final prefs = await SharedPreferences.getInstance();
-    final hasSeenTutorial = prefs.getBool('game_tutorial_seen') ?? false;
+    final hasSeenTutorial = prefs.getBool('block_blast_tutorial_seen') ?? false;
     if (!hasSeenTutorial && mounted) {
       setState(() => _showTutorial = true);
-      _tutorialController.forward();
-      _handSwipeController.repeat(reverse: true);
     }
   }
 
   void _dismissTutorial() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('game_tutorial_seen', true);
+    await prefs.setBool('block_blast_tutorial_seen', true);
     setState(() {
       _showTutorial = false;
       _tutorialStep = 0;
     });
-    _handSwipeController.stop();
-    _tutorialController.stop();
   }
 
   void _nextTutorialStep() {
@@ -460,7 +540,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     });
   }
 
-  // ------------------- AD HELPERS -------------------
   void _loadAd() {
     if (_adShown) return;
     AdMobService.loadInterstitialAd(
@@ -488,138 +567,259 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ------------------- GRID -------------------
-  void _initGrid() {
+  void _checkAndShowAdAtScoreMilestone() {
+    final currentScore = scoreNotifier.value;
+    final milestone = (currentScore ~/ 500) * 500;
+
+    if (milestone > 0 && milestone > _lastAdTriggerScore) {
+      _lastAdTriggerScore = milestone;
+      _loadAd();
+    }
+  }
+
+  void _initGame() {
     grid = List.generate(
-      gridRows,
-      (_) => List.generate(gridCols, (_) => _random.nextInt(emojis.length)),
+      gridSize,
+      (_) => List.generate(gridSize, (_) => null),
     );
-    _clearHint();
-    _lastVibratedMilestone = 0; // Reset milestone on new game
+    scoreNotifier.value = 0;
+    _combo = 0;
+    _linesCleared = 0;
+    _lastVibratedMilestone = 0;
+    _lastAdTriggerScore = 0;
+    _gameOver = false;
+    _showGameOverDialog = false;
+    _clearingRows.clear();
+    _clearingCols.clear();
+    _generateNewPieces();
     setState(() {});
   }
 
-  void _registerInteraction() {
-    _clearHint();
-    _resetIdleHintTimer();
-  }
-
-  void _resetIdleHintTimer() {
-    _idleHintTimer?.cancel();
-    _idleHintTimer = Timer(const Duration(seconds: 30), _showHintIfPossible);
-  }
-
-  void _clearHint() {
-    _hintA = null;
-    _hintB = null;
-    if (_hintPulseController.isAnimating) {
-      _hintPulseController.stop();
-    }
-  }
-
-  List<Point<int>>? _findHintMove() {
-    for (int r = 0; r < gridRows; r++) {
-      for (int c = 0; c < gridCols; c++) {
-        if (c + 1 < gridCols) {
-          _swap(r, c, r, c + 1);
-          final m = _findMatches();
-          _swap(r, c, r, c + 1);
-          if (m.isNotEmpty) return [Point(r, c), Point(r, c + 1)];
-        }
-        if (r + 1 < gridRows) {
-          _swap(r, c, r + 1, c);
-          final m = _findMatches();
-          _swap(r, c, r + 1, c);
-          if (m.isNotEmpty) return [Point(r, c), Point(r + 1, c)];
-        }
+  void _generateNewPieces() {
+    for (int i = 0; i < 3; i++) {
+      if (_availablePieces[i] == null) {
+        _availablePieces[i] = PieceShapes.random(_random, _random.nextInt(blockColors.length));
+        _pieceBounceControllers[i].forward(from: 0);
       }
     }
-    return null;
+    if (!_hasAnyValidMoves()) {
+      _triggerGameOver();
+    }
   }
 
-  void _showHintIfPossible() {
-    if (!mounted) return;
-    if (!_hasAnyPotentialMoves()) return;
-    final hint = _findHintMove();
-    if (hint == null) return;
-
-    setState(() {
-      _hintA = hint[0];
-      _hintB = hint[1];
-    });
-
-    _hintPulseController.repeat(reverse: true);
+  bool _hasAnyValidMoves() {
+    for (final piece in _availablePieces) {
+      if (piece == null) continue;
+      if (_canPlaceAnywhere(piece)) return true;
+      final rotated = piece.rotated();
+      if (_canPlaceAnywhere(rotated)) return true;
+    }
+    return false;
   }
 
-  bool _hasAnyPotentialMoves() {
-    // Try swapping adjacent tiles; if any swap creates a match, a move exists.
-    for (int r = 0; r < gridRows; r++) {
-      for (int c = 0; c < gridCols; c++) {
-        if (c + 1 < gridCols) {
-          _swap(r, c, r, c + 1);
-          final m = _findMatches();
-          _swap(r, c, r, c + 1);
-          if (m.isNotEmpty) return true;
-        }
-        if (r + 1 < gridRows) {
-          _swap(r, c, r + 1, c);
-          final m = _findMatches();
-          _swap(r, c, r + 1, c);
-          if (m.isNotEmpty) return true;
-        }
+  bool _canPlaceAnywhere(BlockPiece piece) {
+    for (int r = 0; r <= gridSize - piece.height; r++) {
+      for (int c = 0; c <= gridSize - piece.width; c++) {
+        if (_isValidPlacementCheck(piece, r, c)) return true;
       }
     }
     return false;
   }
 
-  void _reshuffleBoard() {
-    _registerInteraction();
-    // Keep current emoji pool; just reshuffle board values until at least one move exists.
-    // Also try to avoid immediate matches so user can start playing.
-    const int maxAttempts = 60;
-    final flat = <int>[];
-    for (int r = 0; r < gridRows; r++) {
-      for (int c = 0; c < gridCols; c++) {
-        flat.add(_random.nextInt(emojis.length));
+  bool _isValidPlacementCheck(BlockPiece piece, int row, int col) {
+    if (row < 0 || col < 0 || row + piece.height > gridSize || col + piece.width > gridSize) {
+      return false;
+    }
+    for (final cell in piece.occupiedCells) {
+      final gridR = row + cell.x;
+      final gridC = col + cell.y;
+      if (gridR < 0 || gridR >= gridSize || gridC < 0 || gridC >= gridSize) {
+        return false;
+      }
+      if (grid[gridR][gridC] != null) {
+        return false;
       }
     }
+    return true;
+  }
 
-    for (int attempt = 0; attempt < maxAttempts; attempt++) {
-      flat.shuffle(_random);
-      int i = 0;
-      for (int r = 0; r < gridRows; r++) {
-        for (int c = 0; c < gridCols; c++) {
-          grid[r][c] = flat[i++];
+  void _onPieceDragStart(BlockPiece piece, int index) {
+    setState(() {
+      _draggedPiece = piece;
+      _draggedPieceIndex = index;
+    });
+    HapticFeedback.lightImpact();
+  }
+
+  void _onGridHover(int row, int col) {
+    if (_draggedPiece == null) return;
+    setState(() {
+      _previewPosition = Point(row, col);
+      _isValidPlacement = _isValidPlacementCheck(_draggedPiece!, row, col);
+    });
+  }
+
+  void _onGridDrop(int row, int col) {
+    if (_draggedPiece == null || _draggedPieceIndex == null) return;
+    if (_isValidPlacementCheck(_draggedPiece!, row, col)) {
+      _placePiece(_draggedPiece!, _draggedPieceIndex!, row, col);
+    }
+    setState(() {
+      _draggedPiece = null;
+      _draggedPieceIndex = null;
+      _previewPosition = null;
+      _isValidPlacement = false;
+    });
+  }
+
+  void _placePiece(BlockPiece piece, int pieceIndex, int row, int col) {
+    if (_isProcessing) return;
+    _isProcessing = true;
+    for (final cell in piece.occupiedCells) {
+      final gridR = row + cell.x;
+      final gridC = col + cell.y;
+      grid[gridR][gridC] = piece.colorIndex;
+    }
+    _availablePieces[pieceIndex] = null;
+    final pieceScore = piece.occupiedCells.length * 10;
+    scoreNotifier.value += pieceScore;
+    HapticFeedback.mediumImpact();
+    _piecePlaceController.forward(from: 0);
+    _checkAndShowAdAtScoreMilestone();
+    _processLineClears();
+    setState(() {});
+    _isProcessing = false;
+  }
+
+  void _processLineClears() {
+    final rowsToClear = <int>{};
+    final colsToClear = <int>{};
+    for (int r = 0; r < gridSize; r++) {
+      bool full = true;
+      for (int c = 0; c < gridSize; c++) {
+        if (grid[r][c] == null) {
+          full = false;
+          break;
         }
       }
-      if (_findMatches().isEmpty && _hasAnyPotentialMoves()) {
-        selR = null;
-        selC = null;
-        _stuckNotified = false;
-        _clearHint();
-        setState(() {});
-        return;
-      }
+      if (full) rowsToClear.add(r);
     }
-
-    // Fallback: ensure at least one move even if matches exist.
-    for (int attempt = 0; attempt < maxAttempts; attempt++) {
-      flat.shuffle(_random);
-      int i = 0;
-      for (int r = 0; r < gridRows; r++) {
-        for (int c = 0; c < gridCols; c++) {
-          grid[r][c] = flat[i++];
+    for (int c = 0; c < gridSize; c++) {
+      bool full = true;
+      for (int r = 0; r < gridSize; r++) {
+        if (grid[r][c] == null) {
+          full = false;
+          break;
         }
       }
-      if (_hasAnyPotentialMoves()) {
-        selR = null;
-        selC = null;
-        _stuckNotified = false;
-        _clearHint();
-        setState(() {});
-        return;
+      if (full) colsToClear.add(c);
+    }
+    if (rowsToClear.isNotEmpty || colsToClear.isNotEmpty) {
+      setState(() {
+        _clearingRows.addAll(rowsToClear);
+        _clearingCols.addAll(colsToClear);
+      });
+      final linesCount = rowsToClear.length + colsToClear.length;
+      _combo++;
+      final bonusScore = linesCount * 100 * _combo;
+      scoreNotifier.value += bonusScore;
+      _linesCleared += linesCount;
+      _checkAndTriggerVibration();
+      _showLineClearEffect(rowsToClear, colsToClear);
+      _lineClearController.forward(from: 0).then((_) {
+        setState(() {
+          for (final r in rowsToClear) {
+            for (int c = 0; c < gridSize; c++) {
+              grid[r][c] = null;
+            }
+          }
+          for (final c in colsToClear) {
+            for (int r = 0; r < gridSize; r++) {
+              grid[r][c] = null;
+            }
+          }
+          _clearingRows.clear();
+          _clearingCols.clear();
+        });
+        _generateNewPieces();
+      });
+    } else {
+      _generateNewPieces();
+    }
+  }
+
+  void _checkAndTriggerVibration() {
+    final currentScore = scoreNotifier.value;
+    final currentMilestone = (currentScore ~/ 1000) * 1000;
+    if (currentMilestone > 0 && currentMilestone > _lastVibratedMilestone) {
+      _lastVibratedMilestone = currentMilestone;
+      _triggerVibration();
+    }
+  }
+
+  Future<void> _triggerVibration() async {
+    try {
+      bool? hasVibrator = await Vibration.hasVibrator();
+      if (hasVibrator == true) {
+        await Vibration.vibrate(duration: 300);
+      }
+    } catch (e) {}
+  }
+
+  void _showLineClearEffect(Set<int> rows, Set<int> cols) {
+    for (final r in rows) {
+      for (int c = 0; c < gridSize; c++) {
+        _addParticlesAtCell(r, c);
       }
     }
+    for (final c in cols) {
+      for (int r = 0; r < gridSize; r++) {
+        _addParticlesAtCell(r, c);
+      }
+    }
+    _particleController.forward(from: 0).then((_) {
+      setState(() {
+        _particles.clear();
+      });
+    });
+  }
+
+  void _addParticlesAtCell(int row, int col) {
+    for (int i = 0; i < 8; i++) {
+      _particles.add(_Particle(
+        x: col.toDouble(),
+        y: row.toDouble(),
+        vx: (_random.nextDouble() - 0.5) * 8,
+        vy: (_random.nextDouble() - 0.5) * 8,
+        color: blockColors[_random.nextInt(blockColors.length)],
+        size: 4 + _random.nextDouble() * 6,
+      ));
+    }
+  }
+
+  void _triggerGameOver() {
+    _gameOver = true;
+    _saveHighScore();
+    setState(() {
+      _showGameOverDialog = true;
+    });
+  }
+
+  void _restartGame() {
+    _saveHighScore();
+    _initGame();
+    setState(() {
+      _showGameOverDialog = false;
+    });
+  }
+
+  void _rotatePiece(int index) {
+    if (_availablePieces[index] == null) return;
+    setState(() {
+      _availablePieces[index] = _availablePieces[index]!.rotated();
+    });
+    HapticFeedback.lightImpact();
+    _pieceBounceControllers[index].forward(from: 0.3);
   }
 
   Future<void> _changeTheme(String theme) async {
@@ -628,267 +828,736 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       _showThemeDialog = false;
     });
     await _saveTheme(theme);
-    _initGrid();
-    _resetIdleHintTimer();
+    _initGame();
     _checkFirstTimeTutorial();
   }
 
-  void _onTileTap(int r, int c) {
-    _registerInteraction();
-    if (selR == null) {
-      selR = r;
-      selC = c;
-      setState(() {});
-      return;
-    }
-    final sr = selR!, sc = selC!;
-    if ((sr - r).abs() + (sc - c).abs() != 1) {
-      selR = r;
-      selC = c;
-      setState(() {});
-      return;
-    }
-    selR = null; selC = null;
-    _attemptSwap(sr, sc, r, c);
+  Widget _buildFruitIcon(int index, double size) {
+    final fruits = ["🍎", "🍌", "🍇", "🍊", "🍓", "🍉", "🍑", "🍒"];
+    return Text(fruits[index % fruits.length], style: TextStyle(fontSize: size));
   }
 
-  void _attemptSwap(int r1, int c1, int r2, int c2) {
-    _registerInteraction();
-    _swap(r1, c1, r2, c2);
-    setState(() {});
-    final matches = _findMatches();
-    if (matches.isNotEmpty) {
-      final pts = matches.length * 5;
-      combo++;
-      scoreNotifier.value += pts;
-      _checkAndTriggerVibration();
-      _checkAndShowAdAtComboMilestone(); // Check if we hit combo 7 milestone
-      _showScorePopup(pts, combo);
-      _showExplosionEffect(matches.toList());
-      _removeAndRefill(matches.toList());
-    } else {
-      combo = 0;
-      scoreNotifier.value = max(0, scoreNotifier.value - 1);
-    }
+  Widget _buildEmojiIcon(int index, double size) {
+    final emojis = ["😂", "❤️", "🔥", "😍", "🥰", "👍", "🎉", "😎"];
+    return Text(emojis[index % emojis.length], style: TextStyle(fontSize: size));
   }
 
-  void _checkAndTriggerVibration() {
-    final currentScore = scoreNotifier.value;
-    final currentMilestone = (currentScore ~/ 1000) * 1000;
-    
-    // Check if we crossed a new 1000-point milestone
-    if (currentMilestone > 0 && currentMilestone > _lastVibratedMilestone) {
-      _lastVibratedMilestone = currentMilestone;
-      _triggerVibration();
-    }
-  }
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 360;
 
-  void _checkAndShowAdAtComboMilestone() {
-    // Show ad when combo reaches 7 (and not already shown at this combo milestone)
-    if (combo >= 7 && combo != _lastAdTriggerCombo) {
-      _lastAdTriggerCombo = combo;
-      _loadAd();
-    }
-  }
+    final gridPadding = 8.0;
+    final availableWidth = size.width - (gridPadding * 2);
+    final cellSize = (availableWidth / gridSize).floorToDouble();
 
-  Future<void> _triggerVibration() async {
-    try {
-      // Check if device has vibration capability
-      bool? hasVibrator = await Vibration.hasVibrator();
-      if (hasVibrator == true) {
-        // Vibrate for 300ms
-        await Vibration.vibrate(duration: 300);
-      }
-    } catch (e) {
-      // Silently fail if vibration is not available
-    }
-  }
-
-  void _swap(int r1, int c1, int r2, int c2) {
-    final tmp = grid[r1][c1];
-    grid[r1][c1] = grid[r2][c2];
-    grid[r2][c2] = tmp;
-  }
-
-  Set<Point<int>> _findMatches() {
-    final matched = <Point<int>>{};
-    // horizontal
-    for (int r = 0; r < gridRows; r++) {
-      int run = 1;
-      for (int c = 1; c < gridCols; c++) {
-        if (grid[r][c] == grid[r][c - 1]) {
-          run++;
-        } else {
-          if (run >= 3) {
-            for (int k = 0; k < run; k++) {
-              matched.add(Point(r, c - 1 - k));
-            }
-          }
-          run = 1;
-        }
-      }
-      if (run >= 3) {
-        for (int k = 0; k < run; k++) {
-          matched.add(Point(r, gridCols - 1 - k));
-        }
-      }
-    }
-    // vertical
-    for (int c = 0; c < gridCols; c++) {
-      int run = 1;
-      for (int r = 1; r < gridRows; r++) {
-        if (grid[r][c] == grid[r - 1][c]) {
-          run++;
-        } else {
-          if (run >= 3) {
-            for (int k = 0; k < run; k++) {
-              matched.add(Point(r - 1 - k, c));
-            }
-          }
-          run = 1;
-        }
-      }
-      if (run >= 3) {
-        for (int k = 0; k < run; k++) {
-          matched.add(Point(gridRows - 1 - k, c));
-        }
-      }
-    }
-    return matched;
-  }
-
-  void _removeAndRefill(List<Point<int>> matched) {
-    if (_cascadeDepth > _cascadeDepthLimit) {
-      _cascadeDepth = 0;
-      return;
-    }
-    _cascadeDepth++;
-    for (var p in matched) {
-      if (p.x >= 0 && p.x < gridRows && p.y >= 0 && p.y < gridCols) {
-        grid[p.x][p.y] = -1;
-      }
-    }
-    setState(() {});
-    for (int c = 0; c < gridCols; c++) {
-      final colVals = <int>[];
-      for (int r = gridRows - 1; r >= 0; r--) {
-        if (grid[r][c] != -1) {
-          colVals.add(grid[r][c]);
-        }
-      }
-      while (colVals.length < gridRows) {
-        colVals.add(_random.nextInt(emojis.length));
-      }
-      for (int r = gridRows - 1, i = 0; r >= 0; r--, i++) {
-        grid[r][c] = colVals[i];
-      }
-    }
-    Future.delayed(const Duration(milliseconds: 120), () {
-      final nextMatches = _findMatches();
-      if (nextMatches.isNotEmpty) {
-        final pts = nextMatches.length * 10;
-        combo++;
-        scoreNotifier.value += pts;
-        _checkAndTriggerVibration();
-        _checkAndShowAdAtComboMilestone(); // Check if we hit combo 7 milestone
-        _showScorePopup(pts, combo);
-        _showExplosionEffect(nextMatches.toList());
-        _removeAndRefill(nextMatches.toList());
-      } else {
-        _cascadeDepth = 0;
-
-        // If the board becomes stuck (no possible match-producing move), notify.
-        final hasMoves = _hasAnyPotentialMoves();
-        if (!hasMoves && mounted && !_stuckNotified) {
-          _stuckNotified = true;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('No matches available. Tap refresh to reshuffle.'),
-              action: SnackBarAction(
-                label: 'Refresh',
-                onPressed: _reshuffleBoard,
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D1117),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildTopBar(l10n, isSmallScreen),
+            const SizedBox(height: 4),
+            _buildScoreBar(l10n),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Center(
+                child: _buildGameGrid(cellSize, gridPadding),
               ),
             ),
-          );
-        }
-      }
-    });
+            _buildPiecesArea(l10n, isSmallScreen),
+          ],
+        ),
+      ),
+    );
   }
 
-  // ------------------- EFFECTS -------------------
-  void _showScorePopup(int points, int combo) {
-    final overlay = Overlay.of(context);
-    final entry = OverlayEntry(
-      builder: (_) {
-        return Positioned(
-          top: 50,
-          left: MediaQuery.of(context).size.width / 2 - 30,
-          child: _AnimatedScore(points: points, combo: combo),
-        );
+  Widget _buildTopBar(AppLocalizations? l10n, bool isSmallScreen) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          _buildMenuButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuButton() {
+    return PopupMenuButton<String>(
+      icon: _GlassCard(
+        gradient: LinearGradient(
+          colors: [Colors.grey.shade600, Colors.grey.shade700],
+        ),
+        child: const Icon(
+          Icons.more_vert,
+          color: Colors.white,
+          size: 20,
+        ),
+      ),
+      onSelected: (value) {
+        switch (value) {
+          case 'sound':
+            _toggleMusic();
+            break;
+          case 'music':
+            _showAudioOptionsDialog();
+            break;
+          case 'refresh':
+            _restartGame();
+            break;
+          case 'exit':
+            Navigator.of(context).pop();
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'sound',
+          child: Row(
+            children: [
+              Icon(
+                _isMusicEnabled ? Icons.volume_up : Icons.volume_off,
+                color: _isMusicEnabled ? Colors.green : Colors.grey,
+              ),
+              const SizedBox(width: 8),
+              Text(_isMusicEnabled ? 'Mute Sound' : 'Unmute Sound'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'music',
+          child: Row(
+            children: [
+              Icon(
+                _customAudioPath != null ? Icons.music_note : Icons.music_off,
+                color: _customAudioPath != null ? Colors.orange : Colors.grey,
+              ),
+              const SizedBox(width: 8),
+              Text(_customAudioPath != null ? 'Change Music' : 'Select Music'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'refresh',
+          child: Row(
+            children: [
+              Icon(Icons.refresh, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Restart Game'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'exit',
+          child: Row(
+            children: [
+              Icon(Icons.close, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Exit Game'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScoreBar(AppLocalizations? l10n) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: _GlassCard(
+              gradient: LinearGradient(
+                colors: [Colors.amber.shade600, Colors.orange.shade600],
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    l10n?.score ?? "Score",
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white.withAlpha(200),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  ValueListenableBuilder<int>(
+                    valueListenable: scoreNotifier,
+                    builder: (_, score, __) => Text(
+                      score.toString(),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _GlassCard(
+              gradient: LinearGradient(
+                colors: [Colors.purple.shade500, Colors.deepPurple.shade500],
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    "Best",
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.white.withAlpha(200),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _highScore.toString(),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _GlassCard(
+              gradient: LinearGradient(
+                colors: _combo > 0
+                    ? [Colors.pink.shade500, Colors.red.shade500]
+                    : [Colors.teal.shade500, Colors.cyan.shade500],
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    l10n?.combo ?? "Combo",
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.white.withAlpha(200),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "x$_combo",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _combo > 0 ? Colors.yellowAccent : Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _GlassCard(
+              gradient: LinearGradient(
+                colors: [Colors.green.shade500, Colors.lightGreen.shade500],
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    "Lines",
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.white.withAlpha(200),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _linesCleared.toString(),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGameGrid(double cellSize, double padding) {
+    return Container(
+      margin: EdgeInsets.all(padding),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161922),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withAlpha(20),
+          width: 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(11),
+        child: Stack(
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(gridSize, (row) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(gridSize, (col) {
+                    return _buildGridCell(row, col, cellSize);
+                  }),
+                );
+              }),
+            ),
+            if (_particles.isNotEmpty)
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _particleController,
+                  builder: (context, child) {
+                    return CustomPaint(
+                      size: Size(cellSize * gridSize, cellSize * gridSize),
+                      painter: _ParticlePainter(
+                        _particles,
+                        _particleController.value,
+                        cellSize,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            if (_showGameOverDialog)
+              _buildGameOverOverlay(),
+            if (_showTutorial)
+              _buildTutorialOverlay(cellSize),
+            if (_showThemeDialog)
+              _buildThemeSelectionDialog(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGridCell(int row, int col, double cellSize) {
+    final colorIndex = grid[row][col];
+    final isClearingRow = _clearingRows.contains(row);
+    final isClearingCol = _clearingCols.contains(col);
+    final isClearing = isClearingRow || isClearingCol;
+
+    bool isPreview = false;
+    bool isValidPreview = false;
+    if (_previewPosition != null && _draggedPiece != null) {
+      final previewRow = _previewPosition!.x;
+      final previewCol = _previewPosition!.y;
+
+      for (final cell in _draggedPiece!.occupiedCells) {
+        if (previewRow + cell.x == row && previewCol + cell.y == col) {
+          isPreview = true;
+          isValidPreview = _isValidPlacement;
+          break;
+        }
+      }
+    }
+
+    Widget cellWidget = Container(
+      width: cellSize,
+      height: cellSize,
+      margin: const EdgeInsets.all(0.5),
+      decoration: BoxDecoration(
+        color: colorIndex != null
+            ? blockColors[colorIndex % blockColors.length]
+            : isPreview
+                ? isValidPreview
+                    ? Colors.green.withAlpha(80)
+                    : Colors.red.withAlpha(60)
+                : const Color(0xFF1A1F2E),
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(
+          color: colorIndex != null
+              ? Colors.white.withAlpha(60)
+              : isPreview
+                  ? isValidPreview
+                      ? Colors.green.withAlpha(180)
+                      : Colors.red.withAlpha(120)
+                  : Colors.white.withAlpha(8),
+          width: colorIndex != null ? 1 : 0.5,
+        ),
+        boxShadow: colorIndex != null
+            ? [
+                BoxShadow(
+                  color: blockColors[colorIndex % blockColors.length].withAlpha(100),
+                  blurRadius: 4,
+                  spreadRadius: 0,
+                ),
+              ]
+            : null,
+      ),
+      child: colorIndex != null
+          ? Center(
+              child: _currentTheme == 'fruits'
+                  ? _buildFruitIcon(colorIndex, cellSize * 0.5)
+                  : _buildEmojiIcon(colorIndex, cellSize * 0.5),
+            )
+          : null,
+    );
+
+    if (isClearing) {
+      cellWidget = AnimatedBuilder(
+        animation: _lineClearController,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: 1.0 - (_lineClearController.value * 0.3),
+            child: Opacity(
+              opacity: 1.0 - _lineClearController.value,
+              child: child,
+            ),
+          );
+        },
+        child: cellWidget,
+      );
+    }
+
+    return DragTarget<BlockPiece>(
+      onWillAcceptWithDetails: (details) {
+        _onGridHover(row, col);
+        return _isValidPlacementCheck(details.data, row, col);
+      },
+      onAcceptWithDetails: (details) {
+        _onGridDrop(row, col);
+      },
+      onLeave: (_) {
+        setState(() {
+          _previewPosition = null;
+          _isValidPlacement = false;
+        });
+      },
+      builder: (context, candidateData, rejectedData) {
+        return cellWidget;
       },
     );
-    overlay.insert(entry);
-    Future.delayed(const Duration(milliseconds: 1000), () => entry.remove());
   }
 
-  void _showExplosionEffect(List<Point<int>> tiles) {
-    setState(() {
-      for (var t in tiles) {
-        // Create multiple particles per tile for explosion effect
-        for (int i = 0; i < 6; i++) {
-          _particles.add(_Particle(
-            x: t.y.toDouble(),
-            y: t.x.toDouble(),
-            vx: (_random.nextDouble() - 0.5) * 6,
-            vy: (_random.nextDouble() - 0.5) * 6,
-            color: Colors.primaries[_random.nextInt(Colors.primaries.length)],
-            size: 3 + _random.nextDouble() * 5,
-          ));
-        }
-      }
-    });
-
-    _particleController.forward(from: 0).then((_) {
-      setState(() {
-        _particles.clear();
-      });
-    });
+  Widget _buildPiecesArea(AppLocalizations? l10n, bool isSmallScreen) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        border: Border.all(
+          color: Colors.white.withAlpha(15),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(3, (index) {
+          return _buildDraggablePiece(index, isSmallScreen);
+        }),
+      ),
+    );
   }
 
-  // ------------------- TUTORIAL WIDGET -------------------
-  Widget _buildTutorialOverlay(double tileSize, double padding) {
-    // Calculate position for the first two adjacent tiles in the center
-    final startRow = gridRows ~/ 2 - 1;
-    final startCol = gridCols ~/ 2 - 1;
-    final gap = 6.0;
+  Widget _buildDraggablePiece(int index, bool isSmallScreen) {
+    final piece = _availablePieces[index];
+    final containerSize = isSmallScreen ? 55.0 : 70.0;
 
-    // Calculate actual pixel positions for the two tiles
-    final tile1Left = padding + startCol * (tileSize + gap);
-    final tile1Top = padding + startRow * (tileSize + gap);
-    final tile2Left = padding + (startCol + 1) * (tileSize + gap);
+    if (piece == null) {
+      return Container(
+        width: containerSize,
+        height: containerSize,
+        decoration: BoxDecoration(
+          color: Colors.white.withAlpha(5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.white.withAlpha(10),
+            width: 0.5,
+          ),
+        ),
+      );
+    }
 
-    final centerX = (tile1Left + tile2Left + tileSize) / 2;
-    final centerY = tile1Top + tileSize / 2;
+    final cellSize = containerSize / 4;
 
-    // Tutorial steps content
-    final List<Map<String, dynamic>> steps = [
+    Widget pieceWidget = AnimatedBuilder(
+      animation: _pieceBounceControllers[index],
+      builder: (context, child) {
+        final bounce = 1.0 + (_pieceBounceControllers[index].value * 0.03);
+        return Transform.scale(
+          scale: bounce,
+          child: child,
+        );
+      },
+      child: GestureDetector(
+        onTap: () => _rotatePiece(index),
+        child: Container(
+          width: containerSize,
+          height: containerSize,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1F2E),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: blockColors[piece.colorIndex].withAlpha(100),
+              width: 1,
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(piece.height, (r) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(piece.width, (c) {
+                    if (piece.shape[r][c] == 0) {
+                      return SizedBox(width: cellSize, height: cellSize);
+                    }
+                    return Container(
+                      width: cellSize - 1,
+                      height: cellSize - 1,
+                      margin: const EdgeInsets.all(0.5),
+                      decoration: BoxDecoration(
+                        color: blockColors[piece.colorIndex],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Center(
+                        child: _currentTheme == 'fruits'
+                            ? _buildFruitIcon(piece.colorIndex, cellSize * 0.35)
+                            : _buildEmojiIcon(piece.colorIndex, cellSize * 0.35),
+                      ),
+                    );
+                  }),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return Draggable<BlockPiece>(
+      data: piece,
+      feedback: Material(
+        color: Colors.transparent,
+        child: Container(
+          width: containerSize * 1.2,
+          height: containerSize * 1.2,
+          decoration: BoxDecoration(
+            color: blockColors[piece.colorIndex].withAlpha(40),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(
+            child: Transform.scale(
+              scale: 1.1,
+              child: pieceWidget,
+            ),
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(
+        opacity: 0.2,
+        child: pieceWidget,
+      ),
+      onDragStarted: () => _onPieceDragStart(piece, index),
+      onDragCompleted: () {
+        setState(() {
+          _draggedPiece = null;
+          _draggedPieceIndex = null;
+          _previewPosition = null;
+        });
+      },
+      onDraggableCanceled: (_, __) {
+        setState(() {
+          _draggedPiece = null;
+          _draggedPieceIndex = null;
+          _previewPosition = null;
+        });
+      },
+      child: pieceWidget,
+    );
+  }
+
+  Widget _buildGameOverOverlay() {
+    return Container(
+      color: Colors.black.withAlpha(200),
+      child: Center(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutBack,
+          margin: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF1A237E),
+                const Color(0xFF3949AB),
+                const Color(0xFF5C6BC0),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: Colors.tealAccent.withAlpha(100),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(150),
+                blurRadius: 30,
+                offset: const Offset(0, 15),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.redAccent.shade400,
+                      Colors.pinkAccent.shade400,
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.redAccent.withAlpha(100),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.gamepad,
+                  color: Colors.white,
+                  size: 48,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                "Game Over!",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ValueListenableBuilder<int>(
+                valueListenable: scoreNotifier,
+                builder: (_, score, __) => Column(
+                  children: [
+                    Text(
+                      "Final Score: $score",
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(230),
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (score > _highScore)
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.amber,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          "NEW HIGH SCORE!",
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Best: $_highScore",
+                style: TextStyle(
+                  color: Colors.white.withAlpha(150),
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 24),
+              GestureDetector(
+                onTap: _restartGame,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.tealAccent.shade400,
+                        Colors.cyanAccent.shade400,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.tealAccent.withAlpha(100),
+                        blurRadius: 15,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.refresh, color: Colors.black87, size: 24),
+                      SizedBox(width: 8),
+                      Text(
+                        "Play Again",
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTutorialOverlay(double cellSize) {
+    final l10n = AppLocalizations.of(context);
+
+    final steps = [
       {
-        'icon': Icons.games,
-        'title': 'Welcome to BrainStorming!',
-        'message': 'Match colorful tiles to score points and create amazing combos!',
-        'showDemo': false,
+        'icon': Icons.grid_on,
+        'title': l10n?.welcomeToBrainStorming ?? "Welcome to Block Blast!",
+        'message': "Drag colorful block pieces to fill the 8x8 grid.",
       },
       {
-        'icon': Icons.swap_horiz,
-        'title': 'How to Swap',
-        'message': 'Tap one tile, then tap an adjacent tile to swap their positions.',
-        'showDemo': true,
+        'icon': Icons.touch_app,
+        'title': "How to Play",
+        'message': "Drag pieces from the bottom to the grid. Tap a piece to rotate it!",
       },
       {
         'icon': Icons.auto_awesome,
-        'title': 'Make Matches',
-        'message': 'Match 3 or more identical tiles to score points and create explosions!',
-        'showDemo': true,
+        'title': "Clear Lines",
+        'message': "Fill entire rows or columns to clear them and earn bonus points!",
       },
     ];
 
@@ -897,294 +1566,163 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     return GestureDetector(
       onTap: _nextTutorialStep,
       child: Container(
-        color: Colors.black.withValues(alpha: 200),
-        child: Stack(
-          children: [
-            // Shimmer background effect
-            AnimatedBuilder(
-              animation: _backgroundController,
-              builder: (context, child) {
-                return CustomPaint(
-                  size: Size(MediaQuery.of(context).size.width, MediaQuery.of(context).size.height),
-                  painter: _ShimmerPainter(_backgroundController.value),
-                );
-              },
-            ),
-            
-            // Demo tiles for steps that need them
-            if (currentStep['showDemo'] as bool)
-              Positioned(
-                left: tile1Left - 8,
-                top: tile1Top - 8,
-                child: AnimatedBuilder(
-                  animation: _tutorialController,
-                  builder: (context, child) {
-                    final glow = 1.0 + (_tutorialController.value * 0.3);
-                    return Container(
-                      width: tileSize * 2 + gap + 16,
-                      height: tileSize + 16,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.tealAccent.withValues(alpha: 120),
-                            blurRadius: 25 * glow,
-                            spreadRadius: 8 * glow,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          _buildDemoTile(tileSize, emojis[0], _tutorialController),
-                          SizedBox(width: gap),
-                          _buildDemoTile(tileSize, emojis[0], _tutorialController),
-                        ],
-                      ),
-                    );
-                  },
+        color: Colors.black.withAlpha(220),
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutBack,
+            margin: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF1A237E),
+                  const Color(0xFF3949AB),
+                  const Color(0xFF5C6BC0),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: Colors.tealAccent.withAlpha(100),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(100),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
-              ),
-
-            // Swipe hand animation
-            if (currentStep['showDemo'] as bool)
-              AnimatedBuilder(
-                animation: _handSwipeController,
-                builder: (context, child) {
-                  final slide = _handSwipeController.value;
-                  return Positioned(
-                    left: centerX - 24 + (slide * 40),
-                    top: centerY + 10,
-                    child: Transform.rotate(
-                      angle: -0.3,
-                      child: Icon(
-                        Icons.touch_app,
-                        size: 56,
-                        color: Colors.white.withValues(alpha: 240),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(
+                    steps.length,
+                    (index) => AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: index == _tutorialStep ? 24 : 8,
+                      height: 8,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: index == _tutorialStep
+                            ? Colors.tealAccent
+                            : Colors.white.withAlpha(100),
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
-                  );
-                },
-              ),
-
-            // Tutorial card
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 100,
-              child: Center(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutBack,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF1A237E),
-                        const Color(0xFF3949AB),
-                        const Color(0xFF5C6BC0),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(24),
+                    color: Colors.tealAccent.withAlpha(30),
+                    shape: BoxShape.circle,
                     border: Border.all(
-                      color: Colors.tealAccent.withValues(alpha: 100),
+                      color: Colors.tealAccent.withAlpha(100),
                       width: 2,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 100),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                      BoxShadow(
-                        color: Colors.tealAccent.withValues(alpha: 50),
-                        blurRadius: 40,
-                        spreadRadius: 5,
-                      ),
-                    ],
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Progress dots
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: List.generate(
-                          steps.length,
-                          (index) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: index == _tutorialStep ? 24 : 8,
-                            height: 8,
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: index == _tutorialStep
-                                  ? Colors.tealAccent
-                                  : Colors.white.withValues(alpha: 100),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      
-                      // Icon
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.tealAccent.withValues(alpha: 30),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.tealAccent.withValues(alpha: 100),
-                            width: 2,
-                          ),
-                        ),
-                        child: Icon(
-                          currentStep['icon'] as IconData,
-                          color: Colors.tealAccent.shade200,
-                          size: 40,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Title
-                      Text(
-                        currentStep['title'] as String,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // Message
-                      Text(
-                        currentStep['message'] as String,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 200),
-                          fontSize: 16,
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Action button
-                      GestureDetector(
-                        onTap: _nextTutorialStep,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.tealAccent.shade400,
-                                Colors.cyanAccent.shade400,
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(30),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.tealAccent.withValues(alpha: 100),
-                                blurRadius: 15,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _tutorialStep < steps.length - 1 ? 'Next' : 'Start Playing!',
-                                style: const TextStyle(
-                                  color: Colors.black87,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Icon(
-                                _tutorialStep < steps.length - 1 
-                                    ? Icons.arrow_forward 
-                                    : Icons.play_arrow,
-                                color: Colors.black87,
-                                size: 20,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // Skip option
-                      if (_tutorialStep == 0)
-                        GestureDetector(
-                          onTap: () => _dismissTutorial(),
-                          child: Text(
-                            "Don't show this again",
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 150),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                    ],
+                  child: Icon(
+                    currentStep['icon'] as IconData,
+                    color: Colors.tealAccent.shade200,
+                    size: 40,
                   ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                Text(
+                  currentStep['title'] as String,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  currentStep['message'] as String,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withAlpha(200),
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                GestureDetector(
+                  onTap: _nextTutorialStep,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.tealAccent.shade400,
+                          Colors.cyanAccent.shade400,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.tealAccent.withAlpha(100),
+                          blurRadius: 15,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _tutorialStep < steps.length - 1 ? "Next" : "Start Playing",
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          _tutorialStep < steps.length - 1
+                              ? Icons.arrow_forward
+                              : Icons.play_arrow,
+                          color: Colors.black87,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (_tutorialStep == 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: GestureDetector(
+                      onTap: _dismissTutorial,
+                      child: Text(
+                        l10n?.dontShowAgain ?? "Don't show again",
+                        style: TextStyle(
+                          color: Colors.white.withAlpha(150),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildDemoTile(double tileSize, String emoji, AnimationController controller) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, child) {
-        final scale = 1.0 + (controller.value * 0.05);
-        return Transform.scale(
-          scale: scale,
-          child: Container(
-            width: tileSize,
-            height: tileSize,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.indigo.shade500.withAlpha(235),
-                  Colors.purpleAccent.shade200.withAlpha(235),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withAlpha(50),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(140),
-                  offset: const Offset(0, 6),
-                  blurRadius: 14,
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                emoji,
-                style: TextStyle(
-                  fontSize: tileSize * 0.5,
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+  Widget _buildThemeSelectionDialog() {
+    final l10n = AppLocalizations.of(context);
 
-  // ------------------- THEME SELECTION DIALOG -------------------
-  Widget _buildThemeSelectionDialog(double tileSize) {
     return Container(
       color: Colors.black.withAlpha(220),
       child: Center(
@@ -1214,17 +1752,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 blurRadius: 30,
                 offset: const Offset(0, 15),
               ),
-              BoxShadow(
-                color: Colors.tealAccent.withAlpha(60),
-                blurRadius: 50,
-                spreadRadius: 10,
-              ),
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Icon
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
@@ -1250,11 +1782,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Title
-              const Text(
-                "Choose Your Theme",
-                style: TextStyle(
+              Text(
+                l10n?.chooseYourTheme ?? "Choose Your Theme",
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -1262,7 +1792,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               ),
               const SizedBox(height: 8),
               Text(
-                "Select the emoji style you want to play with",
+                l10n?.selectEmojiStyle ?? "Select your favorite style",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white.withAlpha(180),
@@ -1270,11 +1800,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 ),
               ),
               const SizedBox(height: 28),
-
-              // Theme options
               Row(
                 children: [
-                  // Fruits option
                   Expanded(
                     child: GestureDetector(
                       onTap: () => _changeTheme('fruits'),
@@ -1290,8 +1817,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           ),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: _currentTheme == 'fruits' 
-                                ? Colors.white 
+                            color: _currentTheme == 'fruits'
+                                ? Colors.white
                                 : Colors.white.withAlpha(100),
                             width: _currentTheme == 'fruits' ? 4 : 2,
                           ),
@@ -1313,9 +1840,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                               style: TextStyle(fontSize: 32),
                             ),
                             const SizedBox(height: 12),
-                            const Text(
-                              "Fruits",
-                              style: TextStyle(
+                            Text(
+                              l10n?.fruits ?? "Fruits",
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1323,7 +1850,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              "Classic fruit emojis",
+                              l10n?.classicFruitEmojis ?? "Classic fruit style",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white.withAlpha(150),
@@ -1338,8 +1865,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Text(
-                                  "Selected",
+                                child: Text(
+                                  l10n?.selected ?? "Selected",
                                   style: TextStyle(
                                     color: Colors.orange,
                                     fontSize: 10,
@@ -1353,7 +1880,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  // Emojis option
                   Expanded(
                     child: GestureDetector(
                       onTap: () => _changeTheme('emojis'),
@@ -1392,9 +1918,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                               style: TextStyle(fontSize: 32),
                             ),
                             const SizedBox(height: 12),
-                            const Text(
-                              "Emojis",
-                              style: TextStyle(
+                            Text(
+                              l10n?.emojis ?? "Emojis",
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1402,7 +1928,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              "Social media favorites",
+                              l10n?.socialMediaFavorites ?? "Social media style",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white.withAlpha(150),
@@ -1417,8 +1943,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Text(
-                                  "Selected",
+                                child: Text(
+                                  l10n?.selected ?? "Selected",
                                   style: TextStyle(
                                     color: Colors.purple,
                                     fontSize: 10,
@@ -1441,274 +1967,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final candidate = (width ~/ 64).clamp(5, 9);
-    if (candidate != gridCols) {
-      gridCols = candidate;
-      _initGrid();
-    }
-    final padding = 12.0;
-    final gap = 6.0;
-    final tileSize = (width - padding * 2 - (gridCols - 1) * gap) / gridCols;
-
-    final hasMoves = _hasAnyPotentialMoves();
-    if (hasMoves) {
-      _stuckNotified = false;
-    }
-
-    return Scaffold(
-      backgroundColor: const Color(0xFF070B12),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ------------------- TOP BAR -------------------
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isNarrow = constraints.maxWidth < 390;
-
-                  final titleScoreCard = _GlassCard(
-                    gradient: LinearGradient(colors: [Colors.indigo.shade400, Colors.purpleAccent.shade200]),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(children: const [
-                          Text("🕹 ", style: TextStyle(fontSize: 18)),
-                          Text("BrainStroming", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        ]),
-                        Row(
-                          children: [
-                            ValueListenableBuilder<int>(
-                              valueListenable: scoreNotifier,
-                              builder: (_, score, child) => Text(
-                                "Score: $score",
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.yellowAccent),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: _toggleMusic,
-                              child: Icon(
-                                _isMusicEnabled ? Icons.volume_up : Icons.volume_off,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-
-                  final refreshButton = GestureDetector(
-                    onTap: hasMoves ? null : _reshuffleBoard,
-                    child: Opacity(
-                      opacity: hasMoves ? 0.45 : 1,
-                      child: _GlassCard(
-                        gradient: LinearGradient(colors: [Colors.blueGrey.shade400, Colors.blueGrey.shade200]),
-                        child: const Icon(Icons.refresh, color: Colors.white),
-                      ),
-                    ),
-                  );
-
-                  final closeButton = GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: _GlassCard(
-                      gradient: LinearGradient(colors: [Colors.red.shade400, Colors.redAccent.shade200]),
-                      child: const Icon(Icons.close, color: Colors.white),
-                    ),
-                  );
-
-                  final customAudioButton = GestureDetector(
-                    onTap: _showAudioOptionsDialog,
-                    child: _GlassCard(
-                      gradient: LinearGradient(
-                        colors: _customAudioPath != null
-                            ? [Colors.green.shade400, Colors.teal.shade400]
-                            : [Colors.blueGrey.shade400, Colors.blueGrey.shade200],
-                      ),
-                      child: Icon(
-                        _customAudioPath != null ? Icons.music_note : Icons.music_off,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  );
-
-                  final comboCard = _GlassCard(
-                    gradient: LinearGradient(colors: [Colors.orange.shade400, Colors.redAccent.shade200]),
-                    child: Column(
-                      children: [
-                        const Text("COMBO", style: TextStyle(fontSize: 11, color: Colors.white70)),
-                        const SizedBox(height: 4),
-                        AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 400),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14 + combo.toDouble() * 0.5,
-                            color: combo > 0 ? Colors.yellowAccent : Colors.white,
-                          ),
-                          child: Text("$combo"),
-                        ),
-                      ],
-                    ),
-                  );
-
-                  if (!isNarrow) {
-                    return Row(
-                      children: [
-                        Expanded(child: titleScoreCard),
-                        const SizedBox(width: 10),
-                        customAudioButton,
-                        const SizedBox(width: 10),
-                        refreshButton,
-                        const SizedBox(width: 10),
-                        closeButton,
-                        const SizedBox(width: 10),
-                        comboCard,
-                      ],
-                    );
-                  }
-
-                  return Column(
-                    children: [
-                      titleScoreCard,
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(child: comboCard),
-                          const SizedBox(width: 10),
-                          customAudioButton,
-                          const SizedBox(width: 10),
-                          refreshButton,
-                          const SizedBox(width: 10),
-                          closeButton,
-                        ],
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            // ------------------- GRID -------------------
-            Expanded(
-              child: Stack(
-                children: [
-                  GridView.builder(
-                    padding: EdgeInsets.all(padding),
-                    itemCount: gridRows * gridCols,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: gridCols,
-                      mainAxisSpacing: gap,
-                      crossAxisSpacing: gap,
-                      childAspectRatio: 1,
-                    ),
-                    itemBuilder: (context, idx) {
-                      final r = idx ~/ gridCols;
-                      final c = idx % gridCols;
-                      final val = grid[r][c];
-                      final displayEmoji = (val >= 0 && val < emojis.length) ? emojis[val % emojis.length] : "";
-                      final isSelected = (selR == r && selC == c);
-                      final isHint = (_hintA?.x == r && _hintA?.y == c) || (_hintB?.x == r && _hintB?.y == c);
-                      return GestureDetector(
-                        onTap: () => _onTileTap(r, c),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 140),
-                          curve: Curves.easeInOutBack,
-                          decoration: BoxDecoration(
-                            gradient: isSelected
-                                ? LinearGradient(colors: [Colors.amberAccent.shade100, Colors.deepOrange.shade300])
-                                : LinearGradient(colors: [Colors.indigo.shade500.withValues(alpha: 235), Colors.purpleAccent.shade200.withValues(alpha: 235)]),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isSelected ? Colors.yellowAccent : Colors.white12,
-                              width: isSelected ? 2.6 : 1.0,
-                            ),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withValues(alpha: 140), offset: const Offset(0, 6), blurRadius: 14),
-                              const BoxShadow(color: Colors.white10, offset: Offset(0, -1), blurRadius: 1)
-                            ],
-                          ),
-                          child: Center(
-                            child: AnimatedBuilder(
-                              animation: _hintPulseController,
-                              builder: (context, child) {
-                                final pulse = isHint ? (1 + (_hintPulseController.value * 0.08)) : 1.0;
-                                final selectedScale = isSelected ? 1.08 : 1.0;
-                                return Transform.scale(
-                                  scale: pulse * selectedScale,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(14),
-                                      boxShadow: isHint
-                                          ? [
-                                              BoxShadow(
-                                                color: Colors.white.withValues(alpha: 38),
-                                                blurRadius: 18,
-                                                spreadRadius: 1,
-                                              ),
-                                            ]
-                                          : const [],
-                                    ),
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                displayEmoji,
-                                style: TextStyle(
-                                  fontSize: tileSize * 0.54,
-                                  shadows: const [Shadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 3))],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  // ------------------- PARTICLES -------------------
-                  if (_particles.isNotEmpty)
-                    AnimatedBuilder(
-                      animation: _particleController,
-                      builder: (context, child) {
-                        return CustomPaint(
-                          size: Size(width, MediaQuery.of(context).size.height),
-                          painter: _ParticlePainter(
-                            _particles,
-                            _particleController.value,
-                            tileSize,
-                            padding,
-                            gap,
-                          ),
-                        );
-                      },
-                    ),
-                  // ------------------- TUTORIAL -------------------
-                  if (_showTutorial)
-                    _buildTutorialOverlay(tileSize, padding),
-                  // ------------------- THEME SELECTION -------------------
-                  if (_showThemeDialog)
-                    _buildThemeSelectionDialog(tileSize),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
   void dispose() {
-    _idleHintTimer?.cancel();
-    _hintPulseController.dispose();
-    _tutorialController.dispose();
-    _handSwipeController.dispose();
+    _lineClearController.dispose();
+    _piecePlaceController.dispose();
     _backgroundController.dispose();
     _particleController.dispose();
+    _tutorialController.dispose();
+    _handSwipeController.dispose();
+    for (final controller in _pieceBounceControllers) {
+      controller.dispose();
+    }
     AdMobService.disposeInterstitialAd(_interstitialAd);
     scoreNotifier.dispose();
     _volumeController.removeListener();
@@ -1717,146 +1985,33 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 }
 
-// ------------------- GLASS CARD -------------------
 class _GlassCard extends StatelessWidget {
   final Widget child;
   final Gradient? gradient;
+
   const _GlassCard({required this.child, this.gradient});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         gradient: gradient ?? LinearGradient(colors: [Colors.white24, Colors.white10]),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white24),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 77), offset: const Offset(2, 2), blurRadius: 6)],
+        border: Border.all(color: Colors.white.withAlpha(40)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(77),
+            offset: const Offset(2, 2),
+            blurRadius: 6,
+          ),
+        ],
       ),
       child: child,
     );
   }
 }
 
-// ------------------- SCORE POPUP -------------------
-class _AnimatedScore extends StatefulWidget {
-  final int points;
-  final int combo;
-  const _AnimatedScore({required this.points, required this.combo});
-  @override State<_AnimatedScore> createState() => _AnimatedScoreState();
-}
-
-class _AnimatedScoreState extends State<_AnimatedScore> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<Offset> _offsetAnim;
-  late final Animation<double> _opacityAnim;
-  late final Animation<double> _scaleAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
-    _offsetAnim = Tween<Offset>(begin: const Offset(0, 0), end: const Offset(0, -3))
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-    _opacityAnim = Tween<double>(begin: 1, end: 0)
-        .animate(CurvedAnimation(parent: _controller, curve: const Interval(0.5, 1.0, curve: Curves.easeOut)));
-    _scaleAnim = Tween<double>(begin: 0.5, end: 1.5)
-        .animate(CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.5, curve: Curves.easeOutBack)));
-    _controller.forward();
-  }
-
-  MaterialColor _getComboColor() {
-    if (widget.combo >= 5) return Colors.purple;
-    if (widget.combo >= 3) return Colors.orange;
-    return Colors.yellow;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: _offsetAnim.value * 50,
-          child: Transform.scale(
-            scale: _scaleAnim.value,
-            child: Opacity(
-              opacity: _opacityAnim.value,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (widget.combo > 1)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.purpleAccent.shade400,
-                            Colors.deepPurpleAccent.shade400,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.purpleAccent.withAlpha(100),
-                            blurRadius: 15,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        "COMBO x${widget.combo}!",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          _getComboColor().shade400,
-                          Colors.amber.shade400,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _getComboColor().withAlpha(100),
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      "+${widget.points}",
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  @override void dispose() { _controller.dispose(); super.dispose(); }
-}
-
-// ------------------- EFFECT -------------------
-class _Effect { double x,y; int lifetime; _Effect({required this.x, required this.y, required this.lifetime}); }
-
-// ------------------- PARTICLE SYSTEM -------------------
 class _Particle {
   double x, y;
   double vx, vy;
@@ -1876,27 +2031,25 @@ class _Particle {
 class _ParticlePainter extends CustomPainter {
   final List<_Particle> particles;
   final double progress;
-  final double tileSize;
-  final double padding;
-  final double gap;
+  final double cellSize;
 
-  _ParticlePainter(this.particles, this.progress, this.tileSize, this.padding, this.gap);
+  _ParticlePainter(this.particles, this.progress, this.cellSize);
 
   @override
   void paint(Canvas canvas, Size size) {
     for (var particle in particles) {
-      final x = padding + particle.x * (tileSize + gap) + tileSize / 2;
-      final y = padding + particle.y * (tileSize + gap) + tileSize / 2;
-      
+      final x = particle.x * cellSize + cellSize / 2;
+      final y = particle.y * cellSize + cellSize / 2;
+
       final currentX = x + particle.vx * progress * 50;
-      final currentY = y + particle.vy * progress * 50 + 0.5 * 9.8 * progress * progress * 100;
+      final currentY = y + particle.vy * progress * 50 + 0.5 * 9.8 * progress * progress * 50;
       final currentSize = particle.size * (1 - progress);
-      
+
       if (currentSize > 0) {
         final paint = Paint()
           ..color = particle.color.withAlpha((255 * (1 - progress)).toInt())
           ..style = PaintingStyle.fill;
-        
+
         canvas.drawCircle(
           Offset(currentX, currentY),
           currentSize,
@@ -1904,34 +2057,6 @@ class _ParticlePainter extends CustomPainter {
         );
       }
     }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
-// ------------------- SHIMMER BACKGROUND -------------------
-class _ShimmerPainter extends CustomPainter {
-  final double progress;
-
-  _ShimmerPainter(this.progress);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..shader = LinearGradient(
-        colors: [
-          Colors.transparent,
-          Colors.white.withAlpha(10),
-          Colors.white.withAlpha(20),
-          Colors.white.withAlpha(10),
-          Colors.transparent,
-        ],
-        stops: const [0.0, 0.3, 0.5, 0.7, 1.0],
-        transform: GradientRotation(progress * 2 * 3.14159),
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
   }
 
   @override

@@ -52,4 +52,15 @@ class UserProvider extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  /// Static method to get user profile data directly
+  static Future<Map<String, String?>> getUserProfile() async {
+    final settingsService = SettingsService();
+    final userName = await settingsService.loadUserName();
+    final avatar = await settingsService.loadAvatar();
+    return {
+      'name': userName,
+      'avatar': avatar,
+    };
+  }
 }

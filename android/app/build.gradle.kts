@@ -37,8 +37,13 @@ android {
         applicationId = "com.jstudio.zarorisawal.zarori_sawal"
         minSdk = 24
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.1.3"
+        versionCode = 15
+        versionName = "1.1.5"
+        
+        // Support all device architectures to maximize compatibility
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
     }
 
     signingConfigs {

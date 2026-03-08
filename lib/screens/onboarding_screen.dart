@@ -1,10 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'avatar_selection_screen.dart';
 import '../providers/user_provider.dart';
+import '../l10n/app_localizations.dart';
 import '../utils/app_theme.dart';
 import '../services/notification_service.dart';
+import '../services/avatar_image_service.dart';
 import 'main_selection_screen.dart';
 
 /// Enhanced Onboarding Screen
@@ -165,6 +169,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   void _showErrorSnackBar() {
     HapticFeedback.vibrate();
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -174,8 +179,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             Expanded(
               child: Text(
                 _nameController.text.trim().isEmpty
-                    ? 'Please enter your name to continue'
-                    : 'Name should be at least 2 characters',
+                    ? l10n.pleaseEnterYourName
+                    : l10n.nameShouldBeAtLeast2Characters,
               ),
             ),
           ],
@@ -221,7 +226,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
                 child: Column(
                   children: [
                     const SizedBox(height: 20),
@@ -229,12 +234,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     // Top avatar selector
                     _buildAvatarSelector(isDark),
                     
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32.h),
                     
                     // Animated mascot
                     _buildAnimatedMascot(isDark),
                     
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32.h),
                     
                     // Welcome content with staggered animation
                     FadeTransition(
@@ -246,11 +251,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             // Welcome badge
                             _buildWelcomeBadge(theme, isDark),
                             
-                            const SizedBox(height: 24),
+                            SizedBox(height: 24.h),
                             
                             // Main heading
                             Text(
-                              'Begin Your\nLearning Journey!',
+                              AppLocalizations.of(context).beginYourLearningJourney,
                               textAlign: TextAlign.center,
                               style: theme.textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
@@ -263,7 +268,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             
                             // Subtitle
                             Text(
-                              'Join thousands of learners mastering\nEnglish, Web Dev, Digital Marketing & more',
+                              AppLocalizations.of(context).joinThousandsOfLearners,
                               textAlign: TextAlign.center,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: isDark 
@@ -273,22 +278,22 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               ),
                             ),
                             
-                            const SizedBox(height: 40),
+                            SizedBox(height: 40.h),
                             
                             // Name input card
                             _buildNameInputCard(theme, isDark),
                             
-                            const SizedBox(height: 24),
+                            SizedBox(height: 24.h),
                             
                             // Get started button
                             _buildGetStartedButton(theme, isDark),
                             
-                            const SizedBox(height: 32),
+                            SizedBox(height: 32.h),
                             
                             // Trust indicators
                             _buildTrustIndicators(theme, isDark),
                             
-                            const SizedBox(height: 40),
+                            SizedBox(height: 40.h),
                           ],
                         ),
                       ),
@@ -317,8 +322,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 56.w,
+            height: 56.w,
             decoration: BoxDecoration(
               color: AppColors.primary,
               shape: BoxShape.circle,
@@ -329,17 +334,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ),
             child: ClipOval(
               child: _selectedAvatar != null
-                  ? Image.asset(_selectedAvatar!, fit: BoxFit.cover)
-                  : const Icon(
+                  ? _buildAvatarImage(_selectedAvatar!)
+                  : Icon(
                       Icons.person,
                       color: Colors.white,
-                      size: 28,
+                      size: 28.sp,
                     ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
               borderRadius: BorderRadius.circular(20),
@@ -352,14 +357,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               children: [
                 Icon(
                   Icons.edit,
-                  size: 14,
+                  size: 14.sp,
                   color: isDark ? AppColors.primaryLight : AppColors.primary,
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: 4.w),
                 Text(
-                  'Tap to customize',
+                  AppLocalizations.of(context).tapToCustomize,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 12.sp,
                     color: isDark ? AppColors.primaryLight : AppColors.primary,
                     fontWeight: FontWeight.w500,
                   ),
@@ -376,15 +381,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return ScaleTransition(
       scale: _mascotScale,
       child: Container(
-        width: 120,
-        height: 120,
+        width: 120.w,
+        height: 120.w,
         decoration: BoxDecoration(
           color: AppColors.primary,
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(32.r),
         ),
-        child: const Icon(
+        child: Icon(
           Icons.school,
-          size: 56,
+          size: 56.sp,
           color: Colors.white,
         ),
       ),
@@ -393,10 +398,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   Widget _buildWelcomeBadge(ThemeData theme, bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer.withOpacity(isDark ? 0.3 : 0.2),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(24.r),
         border: Border.all(
           color: theme.colorScheme.primary.withOpacity(0.2),
         ),
@@ -406,12 +411,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         children: [
           Icon(
             Icons.celebration,
-            size: 18,
+            size: 18.sp,
             color: isDark ? AppColors.primaryLight : AppColors.primary,
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8.w),
           Text(
-            'Welcome to Zarori Sawal',
+            AppLocalizations.of(context).welcome,
             style: theme.textTheme.labelLarge?.copyWith(
               color: isDark ? AppColors.primaryLight : AppColors.primary,
               fontWeight: FontWeight.w600,
@@ -426,12 +431,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(24.r),
         border: Border.all(
           color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
         ),
       ),
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24.w),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -440,12 +445,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             children: [
               Icon(
                 Icons.person_outline,
-                size: 20,
+                size: 20.sp,
                 color: isDark ? AppColors.primaryLight : AppColors.primary,
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8.w),
               Text(
-                'What should we call you?',
+                AppLocalizations.of(context).whatShouldWeCallYou,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: isDark ? Colors.white : AppColors.textPrimaryLight,
@@ -454,16 +459,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ],
           ),
           
-          const SizedBox(height: 8),
+          SizedBox(height: 8.h),
           
           Text(
-            'Choose a name that inspires you to learn',
+            AppLocalizations.of(context).chooseNameThatInspires,
             style: theme.textTheme.bodySmall?.copyWith(
               color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
             ),
           ),
           
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           
           // Name input field
           TextField(
@@ -474,7 +479,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               color: isDark ? Colors.white : AppColors.textPrimaryLight,
             ),
             decoration: InputDecoration(
-              hintText: 'Enter your name...',
+              hintText: AppLocalizations.of(context).enterYourName,
               hintStyle: theme.textTheme.bodyLarge?.copyWith(
                 color: isDark 
                     ? AppColors.textTertiaryDark.withOpacity(0.5)
@@ -486,15 +491,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
               suffixIcon: _isNameValid
                   ? Container(
-                      margin: const EdgeInsets.all(8),
+                      margin: EdgeInsets.all(8.w),
                       decoration: const BoxDecoration(
                         color: Colors.green,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.check,
                         color: Colors.white,
-                        size: 16,
+                        size: 16.sp,
                       ),
                     )
                   : null,
@@ -503,37 +508,37 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   ? AppColors.backgroundDark
                   : AppColors.backgroundLight,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16.r),
                 borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16.r),
                 borderSide: BorderSide(
                   color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
                 ),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16.r),
                 borderSide: BorderSide(
                   color: isDark ? AppColors.primaryLight : AppColors.primary,
                   width: 2,
                 ),
               ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16.w,
+                vertical: 16.h,
               ),
             ),
           ),
           
-          const SizedBox(height: 8),
+          SizedBox(height: 8.h),
           
           // Character count hint
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Text(
-                '${_nameController.text.length}/20 characters',
+                '${_nameController.text.length}/20 ${AppLocalizations.of(context).characters}',
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: _nameController.text.length > 20
                       ? AppColors.error
@@ -560,18 +565,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           ..scale(_isButtonPressed ? 0.95 : 1.0),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 18),
+          padding: EdgeInsets.symmetric(vertical: 18.h),
           decoration: BoxDecoration(
             color: _isNameValid
                 ? (isDark ? AppColors.primaryLight : AppColors.primary)
                 : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(20.r),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                _isNameValid ? 'Start Learning Journey' : 'Enter Your Name',
+                _isNameValid ? AppLocalizations.of(context).startLearningJourney : AppLocalizations.of(context).enterYourNameButton,
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: _isNameValid
                       ? Colors.white
@@ -580,11 +585,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 ),
               ),
               if (_isNameValid) ...[
-                const SizedBox(width: 8),
-                const Icon(
+                SizedBox(width: 8.w),
+                Icon(
                   Icons.arrow_forward,
                   color: Colors.white,
-                  size: 20,
+                  size: 20.sp,
                 ),
               ],
             ],
@@ -596,23 +601,23 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   Widget _buildTrustIndicators(ThemeData theme, bool isDark) {
     return Wrap(
-      spacing: 16,
-      runSpacing: 12,
+      spacing: 16.w,
+      runSpacing: 12.h,
       alignment: WrapAlignment.center,
       children: [
         _buildTrustItem(
           icon: Icons.verified_user,
-          label: 'Free Forever',
+          label: AppLocalizations.of(context).freeForever,
           isDark: isDark,
         ),
         _buildTrustItem(
           icon: Icons.offline_bolt,
-          label: 'Learn Offline',
+          label: AppLocalizations.of(context).learnOffline,
           isDark: isDark,
         ),
         _buildTrustItem(
           icon: Icons.emoji_events,
-          label: 'Earn Rewards',
+          label: AppLocalizations.of(context).earnRewards,
           isDark: isDark,
         ),
       ],
@@ -625,11 +630,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     required bool isDark,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: (isDark ? AppColors.surfaceDark : AppColors.surfaceLight)
             .withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.r),
         border: Border.all(
           color: (isDark ? AppColors.dividerDark : AppColors.dividerLight)
               .withOpacity(0.3),
@@ -640,14 +645,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         children: [
           Icon(
             icon,
-            size: 16,
+            size: 16.sp,
             color: isDark ? AppColors.primaryLight : AppColors.primary,
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: 6.w),
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 12.sp,
               fontWeight: FontWeight.w500,
               color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
             ),
@@ -655,5 +660,34 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ],
       ),
     );
+  }
+
+  /// Build avatar image widget - handles both assets and file paths
+  Widget _buildAvatarImage(String avatarPath) {
+    if (AvatarImageService.isCustomAvatar(avatarPath)) {
+      // Custom photo from file
+      return Image.file(
+        File(avatarPath),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[300],
+            child: Icon(Icons.broken_image, color: Colors.grey[600]),
+          );
+        },
+      );
+    } else {
+      // Asset image
+      return Image.asset(
+        avatarPath,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[300],
+            child: Icon(Icons.broken_image, color: Colors.grey[600]),
+          );
+        },
+      );
+    }
   }
 }

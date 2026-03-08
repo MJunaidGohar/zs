@@ -10,6 +10,8 @@ import 'package:flutter/services.dart';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 import '../widgets/top_bar_scaffold.dart';
 
 import '../screens/test_screen.dart';
@@ -25,6 +27,8 @@ import '../services/progress_service.dart';
 import '../services/notification_service.dart';
 
 import '../utils/app_theme.dart';
+
+import '../l10n/app_localizations.dart';
 
 
 
@@ -92,6 +96,10 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
   bool _wasOffline = false;
 
+  bool _isFreshDataLoaded = false;
+
+  bool _isUsingCachedData = false;
+
 
 
   @override
@@ -142,7 +150,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
         .onConnectivityChanged
 
-        .listen((List<ConnectivityResult> results) {
+        .listen((results) async {
 
       final isOnline = results.isNotEmpty && 
 
@@ -160,7 +168,39 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
         debugPrint('MainSelectionScreen: Back online, auto-refreshing...');
 
-        _refreshData();
+        setState(() => _isLoading = true);
+
+        try {
+
+          final success = await _contentService.refreshData();
+
+          if (success && mounted) {
+
+            setState(() {
+
+              _availableTopics = _contentService.getAvailableTopics();
+
+              _isFreshDataLoaded = true;
+
+              _isUsingCachedData = _contentService.isUsingCachedData;
+
+            });
+
+          }
+
+        } catch (e) {
+
+          debugPrint('MainSelectionScreen: Error refreshing data: $e');
+
+        } finally {
+
+          if (mounted) {
+
+            setState(() => _isLoading = false);
+
+          }
+
+        }
 
       }
 
@@ -171,12 +211,6 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
     });
 
   }
-
-
-
-  bool _isFreshDataLoaded = false;
-
-  bool _isUsingCachedData = false;
 
 
 
@@ -261,58 +295,6 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
     } catch (e) {
 
       debugPrint('🔔 MainScreen: Error requesting permission: $e');
-
-    }
-
-  }
-
-
-
-  /// Manually refresh data when back online
-
-  Future<void> _refreshData() async {
-
-    if (_contentService.isOnline == false) return;
-
-    
-
-    setState(() {
-
-      _isLoading = true;
-
-    });
-
-    
-
-    try {
-
-      final success = await _contentService.refreshData();
-
-      if (success) {
-
-        setState(() {
-
-          _availableTopics = _contentService.getAvailableTopics();
-
-          _isFreshDataLoaded = true;
-
-          _isUsingCachedData = false;
-
-        });
-
-      }
-
-    } catch (e) {
-
-      debugPrint('Error refreshing data: $e');
-
-    } finally {
-
-      setState(() {
-
-        _isLoading = false;
-
-      });
 
     }
 
@@ -500,7 +482,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
       return TopBarScaffold(
 
-        title: 'Select Learning Path',
+        title: AppLocalizations.of(context).selectTopic,
 
         body: Container(
 
@@ -582,7 +564,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                 Text(
 
-                  'Loading available content...',
+                  AppLocalizations.of(context).loading,
 
                   style: theme.textTheme.titleMedium?.copyWith(
 
@@ -620,7 +602,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                     curve: Curves.easeInOut,
 
-                    width: 60,
+                    width: 60.w,
 
                     decoration: BoxDecoration(
 
@@ -658,7 +640,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
     return TopBarScaffold(
 
-      title: 'Select Learning Path',
+      title: AppLocalizations.of(context).selectTopic,
 
       body: Container(
 
@@ -850,7 +832,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                                   Text(
 
-                                    'Learning Path',
+                                    AppLocalizations.of(context).learningPath,
 
                                     style: theme.textTheme.titleMedium?.copyWith(
 
@@ -924,7 +906,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                                           Text(
 
-                                            'OFFLINE',
+                                            AppLocalizations.of(context).offline,
 
                                             style: TextStyle(
 
@@ -954,7 +936,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                               Text(
 
-                                'Choose your journey',
+                                AppLocalizations.of(context).chooseYourJourney,
 
                                 style: theme.textTheme.bodyMedium?.copyWith(
 
@@ -972,7 +954,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                                 Text(
 
-                                  'Using saved content. Connect to update.',
+                                  AppLocalizations.of(context).usingSavedContent,
 
                                   style: theme.textTheme.labelSmall?.copyWith(
 
@@ -1018,7 +1000,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                         context: context,
 
-                        title: 'Topic',
+                        title: AppLocalizations.of(context).topics,
 
                         icon: Icons.topic,
 
@@ -1028,9 +1010,9 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                         hint: _availableTopics.isEmpty 
 
-                            ? 'Check internet connection'
+                            ? AppLocalizations.of(context).checkInternetConnection
 
-                            : 'Select a topic to learn',
+                            : AppLocalizations.of(context).selectTopic,
 
                         items: _availableTopics,
 
@@ -1066,7 +1048,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                         context: context,
 
-                        title: 'Level',
+                        title: AppLocalizations.of(context).levels,
 
                         icon: Icons.trending_up,
 
@@ -1076,13 +1058,13 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                         hint: selectedTopic == null 
 
-                            ? 'Select topic first' 
+                            ? AppLocalizations.of(context).selectTopicFirst
 
                             : (getLevelsForTopic().isEmpty 
 
-                                ? 'No levels available for this topic'
+                                ? AppLocalizations.of(context).noLevelsAvailable
 
-                                : 'Select difficulty level'),
+                                : AppLocalizations.of(context).selectLevel),
 
                         items: selectedTopic == null ? [] : getLevelsForTopic(),
 
@@ -1120,7 +1102,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                         context: context,
 
-                        title: 'Subtopic',
+                        title: AppLocalizations.of(context).subtopics,
 
                         icon: Icons.menu_book,
 
@@ -1130,13 +1112,13 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                         hint: selectedLevel == null 
 
-                            ? 'Select level first' 
+                            ? AppLocalizations.of(context).selectLevelFirst
 
                             : (getSubtopicsForLevel().isEmpty 
 
-                                ? 'No subtopics available for this level'
+                                ? AppLocalizations.of(context).noSubtopicsAvailable
 
-                                : 'Select specific area'),
+                                : AppLocalizations.of(context).selectSubtopic),
 
                         items: selectedLevel == null ? [] : getSubtopicsForLevel(),
 
@@ -1210,7 +1192,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                                     child: Text(
 
-                                      'Done',
+                                      AppLocalizations.of(context).done,
 
                                       style: TextStyle(
 
@@ -1274,9 +1256,9 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                         context,
 
-                        title: 'Test Mode',
+                        title: AppLocalizations.of(context).testMode,
 
-                        subtitle: 'Challenge yourself',
+                        subtitle: AppLocalizations.of(context).challengeYourself,
 
                         icon: Icons.quiz,
 
@@ -1320,9 +1302,9 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                         context,
 
-                        title: 'Study Mode',
+                        title: AppLocalizations.of(context).learnMode,
 
-                        subtitle: 'Learn at your pace',
+                        subtitle: AppLocalizations.of(context).learnAtYourPace,
 
                         icon: Icons.school,
 
@@ -1438,7 +1420,7 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                       Text(
 
-                        'For Consultation: +92-307-776-319-5',
+                        '${AppLocalizations.of(context).consultation}: +92-307-776-319-5',
 
                         style: theme.textTheme.labelSmall?.copyWith(
 
@@ -1816,7 +1798,7 @@ class _SelectionCardContent extends StatelessWidget {
 
                       color: isEnabled ? color : theme.colorScheme.outline,
 
-                      size: 22,
+                      size: 22.sp,
 
                     ),
 
@@ -1848,9 +1830,9 @@ class _SelectionCardContent extends StatelessWidget {
 
                     Container(
 
-                      width: 6,
+                      width: 6.w,
 
-                      height: 6,
+                      height: 6.w,
 
                       decoration: BoxDecoration(
 
@@ -1895,6 +1877,8 @@ class _SelectionCardContent extends StatelessWidget {
               child: DropdownButtonFormField<String>(
 
                 isExpanded: true,
+
+                menuMaxHeight: 350.h,
 
                 value: value,
 
@@ -1962,7 +1946,7 @@ class _SelectionCardContent extends StatelessWidget {
 
                   Icons.keyboard_arrow_down,
 
-                  size: 22,
+                  size: 22.sp,
 
                   color: isEnabled && items.isNotEmpty ? color : theme.colorScheme.outline,
 
@@ -1984,7 +1968,7 @@ class _SelectionCardContent extends StatelessWidget {
 
                           value: item,
 
-                          child: Text(item, style: const TextStyle(fontSize: 14)),
+                          child: Text(item, style: TextStyle(fontSize: 14.sp)),
 
                         );
 

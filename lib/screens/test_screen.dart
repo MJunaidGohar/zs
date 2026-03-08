@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../models/question.dart';
 import '../models/attempt.dart';
 import '../services/attempt_service.dart';
@@ -8,6 +9,8 @@ import '../screens/result_screen.dart';
 import '../widgets/top_bar_scaffold.dart';
 import '../services/question_service.dart';
 import '../utils/app_theme.dart';
+import '../utils/text_direction_helper.dart';
+import '../l10n/app_localizations.dart';
 
 
 class TestScreen extends StatefulWidget {
@@ -233,7 +236,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
 
     if (questions.isEmpty) {
       return TopBarScaffold(
-        title: 'Test Mode',
+        title: AppLocalizations.of(context).testMode,
         body: Container(
           decoration: BoxDecoration(
             gradient: isDark
@@ -269,7 +272,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  'No questions available',
+                  AppLocalizations.of(context).noQuestionsAvailable,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -277,7 +280,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Check back later for new content',
+                  AppLocalizations.of(context).checkBackLater,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
                   ),
@@ -292,6 +295,12 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
     final question = questions[currentIndex];
     final double progressValue = (currentIndex + 1) / questions.length;
     final String progressPercent = (progressValue * 100).toStringAsFixed(0);
+
+    // Debug: Print question text to verify encoding
+    debugPrint('🔤 Question text: ${question.questionText}');
+    if (question.options != null && question.options!.isNotEmpty) {
+      debugPrint('🔤 First option: ${question.options![0]}');
+    }
 
     return TopBarScaffold(
       title: '${widget.selectedLevel} - ${widget.selectedSubtopic}',
@@ -426,7 +435,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        "$progressPercent% completed",
+                        "$progressPercent% ${AppLocalizations.of(context).completedPercent}",
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
                           fontWeight: FontWeight.w500,
@@ -485,7 +494,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                           borderRadius: BorderRadius.circular(AppBorderRadius.md),
                         ),
                         child: Text(
-                          'Question ${currentIndex + 1}',
+                          "${AppLocalizations.of(context).question} ${currentIndex + 1}",
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: AppColors.accentPurple,
                             fontWeight: FontWeight.w600,
@@ -499,6 +508,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                           fontWeight: FontWeight.w600,
                           height: 1.4,
                         ),
+                        textDirection: TextDirectionHelper.getTextDirection(question.questionText),
                       ),
                     ],
                   ),
@@ -545,7 +555,9 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                           : Icons.arrow_forward,
                     ),
                     label: Text(
-                      currentIndex == questions.length - 1 ? "Submit Test" : "Next Question",
+                      currentIndex == questions.length - 1 
+                          ? AppLocalizations.of(context).submitTest 
+                          : AppLocalizations.of(context).nextQuestion,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -675,8 +687,8 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
           child: Row(
             children: [
               Container(
-                width: 32,
-                height: 32,
+                width: 32.w,
+                height: 32.w,
                 decoration: BoxDecoration(
                   color: isSelected
                       ? Colors.white.withValues(alpha: 0.2)
@@ -703,11 +715,12 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                     color: textColor,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
+                  textDirection: TextDirectionHelper.getTextDirection(option),
                 ),
               ),
               if (iconData != null)
                 Container(
-                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  padding: EdgeInsets.all(AppSpacing.xs),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
@@ -715,7 +728,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                   child: Icon(
                     iconData,
                     color: textColor,
-                    size: 20,
+                    size: 20.sp,
                   ),
                 ),
             ],

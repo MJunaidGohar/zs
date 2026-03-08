@@ -1,8 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/top_bar_scaffold.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
+import '../services/avatar_image_service.dart';
 import '../utils/app_theme.dart';
 
 /// ------------------------------------------------------------
@@ -33,6 +37,8 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen>
   String? _hoveredAvatar;
   String? _selectedAvatar;
   late AnimationController _bounceController;
+  final AvatarImageService _avatarImageService = AvatarImageService();
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -53,11 +59,12 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return TopBarScaffold(
-      title: "Select Your Avatar",
+      title: l10n.selectYourAvatar,
       body: Container(
         decoration: BoxDecoration(
           gradient: isDark
@@ -103,7 +110,7 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen>
                           ),
                         );
                       },
-                      child: _buildHeaderCard(theme, isDark),
+                      child: _buildHeaderCard(theme, isDark, l10n),
                     ),
                   ),
 
@@ -143,7 +150,7 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen>
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         Text(
-                          'Tap on an avatar to select',
+                          l10n.tapAvatarToSelect,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: isDark
                                 ? AppColors.textSecondaryDark
@@ -163,7 +170,7 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen>
     );
   }
 
-  Widget _buildHeaderCard(ThemeData theme, bool isDark) {
+  Widget _buildHeaderCard(ThemeData theme, bool isDark, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xxl),
       decoration: BoxDecoration(
@@ -205,7 +212,7 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen>
           ),
           const SizedBox(height: AppSpacing.xl),
           Text(
-            'Choose Your Look',
+            l10n.chooseYourLook,
             style: theme.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -215,7 +222,7 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen>
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Select an avatar that represents you',
+            l10n.selectAvatarRepresentsYou,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: Colors.white.withValues(alpha: 0.85),
               height: 1.4,
@@ -229,7 +236,7 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen>
 
   // Build avatar items - extracted for performance
   List<Widget> _buildAvatarItems(ThemeData theme, bool isDark) {
-    return List.generate(_avatars.length, (index) {
+    final items = List<Widget>.generate(_avatars.length, (index) {
       final avatarPath = _avatars[index];
       final isBoy = avatarPath.contains('boy');
       
@@ -258,6 +265,96 @@ class _AvatarSelectionScreenState extends State<AvatarSelectionScreen>
         ),
       );
     });
+
+    // Add custom photo option
+    items.add(
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        child: _CustomPhotoItem(
+          index: _avatars.length,
+          isDark: isDark,
+          bounceController: _bounceController,
+          isLoading: _isLoading,
+          onTap: _handleCustomPhotoSelection,
+        ),
+      ),
+    );
+
+    return items;
+  }
+
+  /// Handle custom photo selection from camera or gallery
+  Future<void> _handleCustomPhotoSelection() async {
+    HapticFeedback.mediumImpact();
+    
+    // Show image source selection dialog
+    final ImageSource? source = await AvatarImageService.showImageSourceDialog(context);
+    
+    if (source == null || !mounted) return;
+    
+    setState(() => _isLoading = true);
+    
+    try {
+      AvatarImageResult result;
+      
+      if (source == ImageSource.camera) {
+        result = await _avatarImageService.pickFromCamera();
+      } else {
+        result = await _avatarImageService.pickFromGallery();
+      }
+      
+      if (!mounted) return;
+      
+      if (result.isSuccess && result.filePath != null) {
+        setState(() => _selectedAvatar = result.filePath);
+        
+        await _bounceController.forward();
+        _bounceController.reverse();
+        
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        await userProvider.setAvatar(result.filePath!);
+        
+        if (!mounted) return;
+        Navigator.pop(context, result.filePath);
+      } else if (result.error != null && result.error!.contains('denied')) {
+        _showPermissionError();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showPermissionError() {
+    if (!mounted) return;
+    
+    final l10n = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                l10n.permissionRequired,
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: isDark ? Colors.red.shade800 : Colors.red.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        action: SnackBarAction(
+          label: l10n.dismiss,
+          textColor: Colors.white70,
+          onPressed: () {},
+        ),
+      ),
+    );
   }
 }
 
@@ -443,7 +540,233 @@ class _AvatarItemState extends State<_AvatarItem> {
             : AppShadows.small,
       ),
       child: Text(
-        widget.isBoy ? 'Boy Avatar' : 'Girl Avatar',
+        widget.isBoy 
+            ? AppLocalizations.of(context).boyAvatar 
+            : AppLocalizations.of(context).girlAvatar,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: _isHovered
+              ? Colors.white
+              : widget.isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
+        ),
+      ),
+    );
+  }
+}
+
+// Custom Photo Widget - for selecting user's own photo
+class _CustomPhotoItem extends StatefulWidget {
+  final int index;
+  final bool isDark;
+  final AnimationController bounceController;
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  const _CustomPhotoItem({
+    required this.index,
+    required this.isDark,
+    required this.bounceController,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  @override
+  State<_CustomPhotoItem> createState() => _CustomPhotoItemState();
+}
+
+class _CustomPhotoItemState extends State<_CustomPhotoItem> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final delay = widget.index * 150;
+    
+    return TweenAnimationBuilder<double>(
+      duration: Duration(milliseconds: 600 + delay),
+      tween: Tween(begin: 0, end: 1),
+      curve: AppCurves.bounce,
+      builder: (context, value, child) {
+        final delayedValue = delay > 0 
+            ? ((value * 1000 - delay) / (1000 - delay)).clamp(0.0, 1.0) 
+            : value;
+        
+        return Transform.translate(
+          offset: Offset(0, 30 * (1 - delayedValue)),
+          child: Opacity(
+            opacity: delayedValue,
+            child: child,
+          ),
+        );
+      },
+      child: GestureDetector(
+        onTap: widget.isLoading ? null : widget.onTap,
+        child: AnimatedContainer(
+          duration: AppDurations.normal,
+          curve: AppCurves.defaultCurve,
+          transform: Matrix4.identity()..scale(_isHovered ? 1.08 : 1.0),
+          child: Column(
+            children: [
+              _buildPhotoCard(),
+              const SizedBox(height: AppSpacing.lg),
+              _buildLabelBadge(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoCard() {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Container(
+        width: 140,
+        height: 140,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: _isHovered
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: widget.isDark
+                      ? const [
+                          Colors.orange,
+                          Colors.deepOrange,
+                        ]
+                      : const [
+                          Colors.orange,
+                          Colors.deepOrange,
+                        ],
+                )
+              : LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: widget.isDark
+                      ? [
+                          Colors.grey.shade800,
+                          Colors.grey.shade900,
+                        ]
+                      : [
+                          Colors.grey.shade200,
+                          Colors.grey.shade300,
+                        ],
+                ),
+          border: Border.all(
+            color: _isHovered
+                ? Colors.transparent
+                : widget.isDark
+                    ? Colors.white.withValues(alpha: 0.3)
+                    : AppColors.dividerLight,
+            width: 3,
+          ),
+          boxShadow: _isHovered
+              ? [
+                  BoxShadow(
+                    color: widget.isDark
+                        ? Colors.orange.withValues(alpha: 0.5)
+                        : Colors.orange.withValues(alpha: 0.4),
+                    blurRadius: 24,
+                    spreadRadius: 6,
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: widget.isDark
+                        ? Colors.black.withValues(alpha: 0.4)
+                        : Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 16,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+        ),
+        child: widget.isLoading
+            ? Center(
+                child: SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      widget.isDark ? Colors.white70 : Colors.black54,
+                    ),
+                  ),
+                ),
+              )
+            : Container(
+                margin: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: widget.isDark
+                      ? Colors.grey.shade800
+                      : Colors.grey.shade100,
+                  border: Border.all(
+                    color: widget.isDark
+                        ? Colors.black.withValues(alpha: 0.3)
+                        : Colors.white,
+                    width: 3,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.add_a_photo_rounded,
+                    size: 48,
+                    color: _isHovered
+                        ? Colors.white
+                        : widget.isDark
+                            ? Colors.orange.shade300
+                            : Colors.orange.shade600,
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildLabelBadge() {
+    return AnimatedContainer(
+      duration: AppDurations.normal,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        gradient: _isHovered
+            ? LinearGradient(
+                colors: widget.isDark
+                    ? const [
+                        Colors.orange,
+                        Colors.deepOrange,
+                      ]
+                    : const [
+                        Colors.orange,
+                        Colors.deepOrange,
+                      ],
+              )
+            : null,
+        color: _isHovered
+            ? null
+            : widget.isDark
+                ? AppColors.surfaceDark.withValues(alpha: 0.8)
+                : AppColors.surfaceLight.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(AppBorderRadius.circular),
+        boxShadow: _isHovered
+            ? [
+                BoxShadow(
+                  color: widget.isDark
+                      ? Colors.orange.withValues(alpha: 0.3)
+                      : Colors.orange.withValues(alpha: 0.25),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ]
+            : AppShadows.small,
+      ),
+      child: Text(
+        AppLocalizations.of(context).yourPhoto,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
           fontWeight: FontWeight.w600,
           color: _isHovered

@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
+import '../services/avatar_image_service.dart';
 
 /// ------------------------------------------------------------
 /// AvatarDisplay Widget
@@ -53,12 +55,10 @@ class AvatarDisplay extends StatelessWidget {
           radius: size / 2,
           backgroundColor: Colors.grey[300],
 
-          /// ✅ If avatar exists → show it from assets
-          backgroundImage: (avatarPath != null && avatarPath.isNotEmpty)
-              ? AssetImage(avatarPath)
-              : null,
+          /// If avatar exists → show it (handles both assets and file paths)
+          backgroundImage: _getAvatarImage(avatarPath),
 
-          /// ✅ Otherwise fallback to person icon
+          /// Otherwise fallback to person icon
           child: (avatarPath == null || avatarPath.isEmpty)
               ? Icon(
                   Icons.person,
@@ -69,5 +69,15 @@ class AvatarDisplay extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  ImageProvider _getAvatarImage(String? avatarPath) {
+    if (avatarPath == null || avatarPath.isEmpty) {
+      return AssetImage('assets/default_avatar.png'); // default avatar
+    } else if (avatarPath.startsWith('assets/')) {
+      return AssetImage(avatarPath);
+    } else {
+      return FileImage(File(avatarPath));
+    }
   }
 }

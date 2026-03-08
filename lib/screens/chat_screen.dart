@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/chat_provider.dart';
 import '../services/daily_tip_service.dart';
 import '../widgets/chat_bubble.dart';
@@ -68,6 +69,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _showQuotaExhaustedSnackbar() {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -75,8 +77,8 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             Icon(Icons.info_outline, color: theme.colorScheme.onError),
             const SizedBox(width: 8),
-            const Expanded(
-              child: Text('Daily quota reached! Try again tomorrow.'),
+            Expanded(
+              child: Text(l10n.dailyQuotaReachedMessage),
             ),
           ],
         ),
@@ -90,6 +92,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -138,7 +141,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   final isLoading = provider.isLoading;
 
                   if (messages.isEmpty && !isLoading) {
-                    return _buildWelcomeView(theme, isDark);
+                    return _buildWelcomeView(theme, isDark, l10n);
                   }
 
                   return ListView.builder(
@@ -213,7 +216,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
 
             // Input Area
-            _buildInputArea(theme, isDark),
+            _buildInputArea(theme, isDark, l10n),
           ],
         ),
       ),
@@ -259,7 +262,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildWelcomeView(ThemeData theme, bool isDark) {
+  Widget _buildWelcomeView(ThemeData theme, bool isDark, AppLocalizations l10n) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -267,7 +270,7 @@ class _ChatScreenState extends State<ChatScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              '👋 Welcome to ZS Assistant!',
+              l10n.welcomeToZSAssistant,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -275,7 +278,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Ask your question',
+              l10n.askYourQuestion,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -289,7 +292,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                '💡 15 messages/day',
+                l10n.messagesPerDay,
                 style: TextStyle(
                   color: theme.colorScheme.onPrimaryContainer,
                   fontSize: 11,
@@ -303,7 +306,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildInputArea(ThemeData theme, bool isDark) {
+  Widget _buildInputArea(ThemeData theme, bool isDark, AppLocalizations l10n) {
     final hasQuota = context.select<ChatProvider, bool>((p) => p.hasQuota);
 
     return Container(
@@ -334,8 +337,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
                       hintText: hasQuota
-                          ? 'Type your question...'
-                          : 'Daily quota reached',
+                          ? l10n.typeYourQuestion
+                          : l10n.dailyQuotaReached,
                       hintStyle: TextStyle(
                         color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
                       ),
@@ -398,7 +401,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       const SizedBox(width: 6),
                       Text(
                         provider.isQuotaExhausted
-                            ? 'Quota exhausted - Try again tomorrow'
+                            ? l10n.quotaExhausted
                             : 'Quota: ${provider.quotaDisplay} messages today',
                         style: TextStyle(
                           color: provider.isQuotaExhausted

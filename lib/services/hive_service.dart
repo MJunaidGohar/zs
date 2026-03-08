@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:hive/hive.dart';
 import '../models/attempt.dart';
 import '../models/question.dart';
+import '../models/note.dart';
 
 class HiveService {
   static final HiveService _instance = HiveService._internal();
@@ -33,6 +34,9 @@ class HiveService {
     }
     if (!Hive.isAdapterRegistered(QuestionAdapter().typeId)) {
       Hive.registerAdapter(QuestionAdapter());
+    }
+    if (!Hive.isAdapterRegistered(NoteAdapter().typeId)) {
+      Hive.registerAdapter(NoteAdapter());
     }
 
     // Open boxes only if not already open

@@ -33,6 +33,7 @@ import '../screens/main_selection_screen.dart';
 import '../screens/test_screen.dart';
 
 import '../utils/app_theme.dart';
+import '../l10n/app_localizations.dart';
 
 
 
@@ -560,7 +561,7 @@ class _ResultScreenState extends State<ResultScreen>
 
     if (isSuccess) {
 
-      message = "Excellent! Keep it up!";
+      message = AppLocalizations.of(context).excellent;
 
       accentColor = AppColors.success;
 
@@ -568,9 +569,9 @@ class _ResultScreenState extends State<ResultScreen>
 
     } else {
 
-      message = "Don't give up! You can do it!";
+      message = AppLocalizations.of(context).dontGiveUp;
 
-      accentColor = AppColors.warning;
+      accentColor = AppColors.primary;
 
       resultIcon = Icons.trending_up;
 
@@ -580,7 +581,7 @@ class _ResultScreenState extends State<ResultScreen>
 
     return TopBarScaffold(
 
-      title: "Result",
+      title: AppLocalizations.of(context).result,
 
       body: Stack(
 
@@ -730,27 +731,15 @@ class _ResultScreenState extends State<ResultScreen>
 
                             decoration: BoxDecoration(
 
-                              gradient: LinearGradient(
-
-                                colors: isSuccess 
-
-                                    ? AppColors.gradientSuccess
-
-                                    : AppColors.gradientAccentWarm,
-
-                                begin: Alignment.topLeft,
-
-                                end: Alignment.bottomRight,
-
-                              ),
+                              color: isSuccess ? AppColors.success : AppColors.primary,
 
                               borderRadius: BorderRadius.circular(AppBorderRadius.xxl),
 
-                              boxShadow: isSuccess ? AppShadows.glowSuccess : [
+                              boxShadow: [
 
                                 BoxShadow(
 
-                                  color: AppColors.warning.withValues(alpha: 0.3),
+                                  color: (isSuccess ? AppColors.success : AppColors.primary).withValues(alpha: 0.3),
 
                                   blurRadius: 12,
 
@@ -904,7 +893,7 @@ class _ResultScreenState extends State<ResultScreen>
 
                                   context,
 
-                                  label: "Correct",
+                                  label: AppLocalizations.of(context).correct,
 
                                   value: "${widget.score}",
 
@@ -930,7 +919,7 @@ class _ResultScreenState extends State<ResultScreen>
 
                                   context,
 
-                                  label: "Wrong",
+                                  label: AppLocalizations.of(context).wrong,
 
                                   value: "${widget.total - widget.score}",
 
@@ -1010,9 +999,17 @@ class _ResultScreenState extends State<ResultScreen>
 
                                   },
 
-                                  icon: const Icon(Icons.refresh),
+                                  icon: const Icon(Icons.refresh, size: 18),
 
-                                  label: const Text("Reattempt"),
+                                  label: Text(
+
+                                    AppLocalizations.of(context).reattempt,
+
+                                    softWrap: false,
+
+                                    overflow: TextOverflow.ellipsis,
+
+                                  ),
 
                                 ),
 
@@ -1044,7 +1041,7 @@ class _ResultScreenState extends State<ResultScreen>
 
                                   icon: const Icon(Icons.home),
 
-                                  label: const Text("Home"),
+                                  label: Text(AppLocalizations.of(context).home),
 
                                 ),
 
@@ -1090,11 +1087,11 @@ class _ResultScreenState extends State<ResultScreen>
 
                   AppColors.primary,
 
-                  AppColors.accentPurple,
-
-                  AppColors.accentOrange,
-
                   AppColors.secondary,
+
+                  AppColors.info,
+
+                  AppColors.primaryLight,
 
                 ],
 
@@ -1126,7 +1123,7 @@ class _ResultScreenState extends State<ResultScreen>
 
                 onPressed: _isSharing ? null : _shareResult,
 
-                backgroundColor: accentColor,
+                backgroundColor: AppColors.primary,
 
                 icon: _isSharing
 
@@ -1150,7 +1147,7 @@ class _ResultScreenState extends State<ResultScreen>
 
                 label: Text(
 
-                  _isSharing ? 'Sharing...' : 'Share Result',
+                  _isSharing ? AppLocalizations.of(context).sharing : AppLocalizations.of(context).shareResult,
 
                   style: const TextStyle(
 

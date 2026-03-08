@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart' show FlutterQuillLocalizations;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'dart:io';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+
+// Localization
+import 'l10n/app_localizations.dart';
 
 // Services
 import 'services/hive_service.dart';
@@ -12,11 +19,13 @@ import 'services/notification_service.dart';
 import 'services/floating_button_service.dart';
 import 'services/chat_quota_service.dart';
 import 'services/admob_service.dart';
+import 'services/notes_service.dart';
 
 // Providers
 import 'providers/user_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/language_provider.dart';
 
 // Screens
 import 'screens/onboarding_screen.dart';
@@ -70,6 +79,9 @@ void main() async {
   
   final chatQuotaService = ChatQuotaService();
   await chatQuotaService.init();
+
+  // Initialize Notes service
+  await NotesService.init();
   
   // Initialize Providers
   final userProvider = UserProvider();
@@ -77,18 +89,26 @@ void main() async {
   final themeProvider = ThemeProvider();
   final chatProvider = ChatProvider();
   await chatProvider.init();
+  final languageProvider = LanguageProvider();
+  await Future.delayed(Duration.zero); // Allow language provider to initialize
 
   // AdMob - uses platform-aware service
   await AdMobService.initialize();
 
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => userProvider),
-        ChangeNotifierProvider(create: (_) => themeProvider),
-        ChangeNotifierProvider(create: (_) => chatProvider),
-      ],
-      child: const MyApp(),
+    ScreenUtilInit(
+      designSize: const Size(375, 812),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) => MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => userProvider),
+          ChangeNotifierProvider(create: (_) => themeProvider),
+          ChangeNotifierProvider(create: (_) => chatProvider),
+          ChangeNotifierProvider(create: (_) => languageProvider),
+        ],
+        child: const MyApp(),
+      ),
     ),
   );
 }
@@ -100,14 +120,23 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final userProvider = Provider.of<UserProvider>(context);
+    final languageProvider = Provider.of<LanguageProvider>(context);
 
     // Loading state
-    if (userProvider.isLoading) {
+    if (userProvider.isLoading || languageProvider.isLoading) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: _buildLightTheme(),
-        darkTheme: _buildDarkTheme(),
+        theme: _buildLightTheme(context),
+        darkTheme: _buildDarkTheme(context),
         themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          FlutterQuillLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
         home: const Scaffold(
           body: Center(
             child: CircularProgressIndicator(),
@@ -131,9 +160,18 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Zarori Sawal',
-      theme: _buildLightTheme(),
-      darkTheme: _buildDarkTheme(),
+      theme: _buildLightTheme(context),
+      darkTheme: _buildDarkTheme(context),
       themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      locale: languageProvider.locale,
+      localizationsDelegates: const [
+        AppLocalizationsDelegate(),
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        FlutterQuillLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       navigatorObservers: [chatButtonObserver],
       initialRoute: initialRoute,
       routes: {
@@ -144,7 +182,7 @@ class MyApp extends StatelessWidget {
       },
       builder: (context, child) {
         return Directionality(
-          textDirection: TextDirection.ltr,
+          textDirection: languageProvider.textDirection,
           child: Overlay(
             initialEntries: [
               OverlayEntry(
@@ -160,8 +198,33 @@ class MyApp extends StatelessWidget {
     );
   }
 
-  /// Build Light Theme
-  ThemeData _buildLightTheme() {
+  /// Build Light Theme with optional Urdu font support
+  ThemeData _buildLightTheme(BuildContext context) {
+    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+    final isUrdu = languageProvider.currentLanguageCode == 'ur';
+    
+    // Use Noto Nastaliq Urdu for Urdu language, default font otherwise
+    final textTheme = isUrdu
+        ? GoogleFonts.notoNastaliqUrduTextTheme(
+            ThemeData.light().textTheme,
+          )
+        : const TextTheme(
+            displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight, letterSpacing: -0.5),
+            displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight, letterSpacing: -0.5),
+            displaySmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight, letterSpacing: -0.25),
+            headlineLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
+            headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
+            headlineSmall: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
+            titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
+            titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
+            titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
+            bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.normal, color: AppColors.textPrimaryLight, height: 1.5),
+            bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.normal, color: AppColors.textSecondaryLight, height: 1.5),
+            bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.normal, color: AppColors.textTertiaryLight, height: 1.4),
+            labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondaryLight),
+            labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textTertiaryLight),
+            labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textTertiaryLight, letterSpacing: 0.5),
+          );
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
@@ -335,28 +398,41 @@ class MyApp extends StatelessWidget {
         tileColor: AppColors.surfaceLight,
         contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
       ),
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight, letterSpacing: -0.5),
-        displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight, letterSpacing: -0.5),
-        displaySmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight, letterSpacing: -0.25),
-        headlineLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
-        headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
-        headlineSmall: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
-        titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
-        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
-        titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight),
-        bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.normal, color: AppColors.textPrimaryLight, height: 1.5),
-        bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.normal, color: AppColors.textSecondaryLight, height: 1.5),
-        bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.normal, color: AppColors.textTertiaryLight, height: 1.4),
-        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondaryLight),
-        labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textTertiaryLight),
-        labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textTertiaryLight, letterSpacing: 0.5),
-      ),
+      textTheme: textTheme,
     );
   }
 
-  /// Build Dark Theme
-  ThemeData _buildDarkTheme() {
+  /// Build Dark Theme with optional Urdu font support
+  ThemeData _buildDarkTheme(BuildContext context) {
+    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+    final isUrdu = languageProvider.currentLanguageCode == 'ur';
+    
+    // Use Noto Nastaliq Urdu for Urdu language, default font otherwise
+    final textTheme = isUrdu
+        ? GoogleFonts.notoNastaliqUrduTextTheme(
+            ThemeData.dark().textTheme.copyWith(
+              bodyLarge: const TextStyle(color: AppColors.textPrimaryDark),
+              bodyMedium: const TextStyle(color: AppColors.textSecondaryDark),
+              bodySmall: const TextStyle(color: AppColors.textTertiaryDark),
+            ),
+          )
+        : const TextTheme(
+            displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimaryDark, letterSpacing: -0.5),
+            displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimaryDark, letterSpacing: -0.5),
+            displaySmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark, letterSpacing: -0.25),
+            headlineLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark),
+            headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark),
+            headlineSmall: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark),
+            titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark),
+            titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark),
+            titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark),
+            bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.normal, color: AppColors.textPrimaryDark, height: 1.5),
+            bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.normal, color: AppColors.textSecondaryDark, height: 1.5),
+            bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.normal, color: AppColors.textTertiaryDark, height: 1.4),
+            labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondaryDark),
+            labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textTertiaryDark),
+            labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textTertiaryDark, letterSpacing: 0.5),
+          );
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
@@ -530,23 +606,7 @@ class MyApp extends StatelessWidget {
         tileColor: AppColors.surfaceDark,
         contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
       ),
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimaryDark, letterSpacing: -0.5),
-        displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimaryDark, letterSpacing: -0.5),
-        displaySmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark, letterSpacing: -0.25),
-        headlineLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark),
-        headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark),
-        headlineSmall: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark),
-        titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark),
-        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark),
-        titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimaryDark),
-        bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.normal, color: AppColors.textPrimaryDark, height: 1.5),
-        bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.normal, color: AppColors.textSecondaryDark, height: 1.5),
-        bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.normal, color: AppColors.textTertiaryDark, height: 1.4),
-        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondaryDark),
-        labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textTertiaryDark),
-        labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textTertiaryDark, letterSpacing: 0.5),
-      ),
+      textTheme: textTheme,
     );
   }
 }

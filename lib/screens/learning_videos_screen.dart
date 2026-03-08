@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../l10n/app_localizations.dart';
 import '../services/admob_service.dart';
 import '../services/youtube_api_service.dart';
 import '../screens/video_player_screen.dart';
@@ -36,7 +38,7 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _loadInterstitialAd();
+    // Interstitial removed from here - will show when leaving screen instead
   }
 
   void _loadBannerAd() {
@@ -70,20 +72,35 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
   }
 
   // ------------------- INTERSTITIAL AD -------------------
-  void _loadInterstitialAd() {
-    if (_adShown) return;
+  /// Shows interstitial ad when leaving the screen
+  void _showInterstitialOnExit() {
+    if (_adShown) {
+      Navigator.pop(context);
+      return;
+    }
+    
     AdMobService.loadInterstitialAd(
       adUnitId: 'ca-app-pub-5721278995377651/6519657994',
       onAdLoaded: (ad) {
         _interstitialAd = ad;
-        try { ad.show(); _adShown = true; } catch (_) {}
+        _adShown = true;
         ad.fullScreenContentCallback = FullScreenContentCallback(
-          onAdDismissedFullScreenContent: (ad) => ad.dispose(),
-          onAdFailedToShowFullScreenContent: (ad, err) => ad.dispose(),
+          onAdDismissedFullScreenContent: (ad) {
+            ad.dispose();
+            Navigator.pop(context);
+          },
+          onAdFailedToShowFullScreenContent: (ad, err) {
+            ad.dispose();
+            Navigator.pop(context);
+          },
         );
+        try { ad.show(); } catch (_) {
+          Navigator.pop(context);
+        }
       },
       onAdFailedToLoad: (err) {
         _interstitialAd = null;
+        Navigator.pop(context);
       },
     );
   }
@@ -192,6 +209,35 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
   }
 
   void _navigateToPlayer(VideoItem video) {
+    // Show interstitial before navigating away
+    if (!_adShown) {
+      AdMobService.loadInterstitialAd(
+        adUnitId: 'ca-app-pub-5721278995377651/6519657994',
+        onAdLoaded: (ad) {
+          _interstitialAd = ad;
+          _adShown = true;
+          ad.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _pushVideoPlayer(video);
+            },
+            onAdFailedToShowFullScreenContent: (ad, err) {
+              ad.dispose();
+              _pushVideoPlayer(video);
+            },
+          );
+          try { ad.show(); } catch (_) { _pushVideoPlayer(video); }
+        },
+        onAdFailedToLoad: (err) {
+          _pushVideoPlayer(video);
+        },
+      );
+    } else {
+      _pushVideoPlayer(video);
+    }
+  }
+
+  void _pushVideoPlayer(VideoItem video) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -202,6 +248,7 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -209,10 +256,10 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Back to Profile',
+          onPressed: _showInterstitialOnExit,
+          tooltip: l10n.backToProfile,
         ),
-        title: const Text('Learning Videos'),
+        title: Text(l10n.learningVideos),
         centerTitle: true,
         elevation: 4,
         shape: const RoundedRectangleBorder(
@@ -267,7 +314,7 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
                           focusNode: _searchFocusNode,
                           textInputAction: TextInputAction.search,
                           decoration: InputDecoration(
-                            hintText: 'Search learning videos...',
+                            hintText: l10n.searchLearningVideos,
                             hintStyle: TextStyle(
                               color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
@@ -317,7 +364,7 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
 
                 // Domain Chips
                 SizedBox(
-                  height: 40,
+                  height: 40.h,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: _allowedDomains.length,
@@ -398,6 +445,7 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
   }
 
   Widget _buildInitialState(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -406,12 +454,12 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
           children: [
             Icon(
               Icons.play_circle_outline,
-              size: 80,
+              size: 80.sp,
               color: theme.colorScheme.primary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 24),
             Text(
-              'Discover Learning Videos',
+              l10n.discoverLearningVideos,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -419,7 +467,7 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Search for educational videos in English Language, Web Development, Computer Basics, or Digital Marketing.',
+              l10n.searchEducationalVideos,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -449,6 +497,7 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
   }
 
   Widget _buildEmptyState(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -462,14 +511,14 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'No results found',
+              l10n.noResultsFound,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Try searching with different keywords or select a domain chip above.',
+              l10n.tryDifferentKeywords,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -482,6 +531,7 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
   }
 
   Widget _buildErrorState(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -495,7 +545,7 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Something went wrong',
+              l10n.somethingWentWrong,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -512,7 +562,7 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
             ElevatedButton.icon(
               onPressed: _performSearch,
               icon: const Icon(Icons.refresh),
-              label: const Text('Try Again'),
+              label: Text(l10n.tryAgain),
             ),
           ],
         ),
@@ -563,14 +613,14 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
                   children: [
                     Image.network(
                       video.thumbnailUrl,
-                      width: 120,
-                      height: 90,
+                      width: 120.w,
+                      height: 90.h,
                       fit: BoxFit.cover,
                       loadingBuilder: (context, child, loadingProgress) {
                         if (loadingProgress == null) return child;
                         return Container(
-                          width: 120,
-                          height: 90,
+                          width: 120.w,
+                          height: 90.h,
                           color: isDark ? Colors.grey[800] : Colors.grey[200],
                           child: const Center(
                             child: CircularProgressIndicator(strokeWidth: 2),
@@ -579,12 +629,12 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
                       },
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
-                          width: 120,
-                          height: 90,
+                          width: 120.w,
+                          height: 90.h,
                           color: isDark ? Colors.grey[800] : Colors.grey[200],
                           child: Icon(
                             Icons.play_circle_outline,
-                            size: 40,
+                            size: 40.sp,
                             color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                         );
@@ -599,10 +649,10 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
                             color: Colors.black.withValues(alpha: 0.6),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.play_arrow,
                             color: Colors.white,
-                            size: 24,
+                            size: 24.sp,
                           ),
                         ),
                       ),
@@ -656,7 +706,7 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          _formatDate(video.publishedAt),
+                          _formatDate(video.publishedAt, context),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                             fontSize: 12,
@@ -674,24 +724,25 @@ class _LearningVideosScreenState extends State<LearningVideosScreen> {
     );
   }
 
-  String _formatDate(String isoDate) {
+  String _formatDate(String isoDate, BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     try {
       final date = DateTime.parse(isoDate);
       final now = DateTime.now();
       final diff = now.difference(date);
 
       if (diff.inDays > 365) {
-        return '${(diff.inDays / 365).floor()} year${(diff.inDays / 365).floor() > 1 ? 's' : ''} ago';
+        return '${(diff.inDays / 365).floor()} ${(diff.inDays / 365).floor() > 1 ? l10n.years : l10n.year} ${l10n.ago}';
       } else if (diff.inDays > 30) {
-        return '${(diff.inDays / 30).floor()} month${(diff.inDays / 30).floor() > 1 ? 's' : ''} ago';
+        return '${(diff.inDays / 30).floor()} ${(diff.inDays / 30).floor() > 1 ? l10n.months : l10n.month} ${l10n.ago}';
       } else if (diff.inDays > 0) {
-        return '${diff.inDays} day${diff.inDays > 1 ? 's' : ''} ago';
+        return '${diff.inDays} ${diff.inDays > 1 ? l10n.days : l10n.day} ${l10n.ago}';
       } else if (diff.inHours > 0) {
-        return '${diff.inHours} hour${diff.inHours > 1 ? 's' : ''} ago';
+        return '${diff.inHours} ${diff.inHours > 1 ? l10n.hours : l10n.hour} ${l10n.ago}';
       } else if (diff.inMinutes > 0) {
-        return '${diff.inMinutes} minute${diff.inMinutes > 1 ? 's' : ''} ago';
+        return '${diff.inMinutes} ${diff.inMinutes > 1 ? l10n.minutes : l10n.minute} ${l10n.ago}';
       } else {
-        return 'Just now';
+        return l10n.justNow;
       }
     } catch (e) {
       return isoDate;
