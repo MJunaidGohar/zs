@@ -70,7 +70,13 @@ class NotificationService {
 
     const initSettings = InitializationSettings(android: android, iOS: iOS);
 
-    await _notifications.initialize(initSettings);
+    await _notifications.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        // Handle notification tap
+        debugPrint('Notification tapped: ${response.payload}');
+      },
+    );
 
     // ✅ Create notification channel to match Manifest
     const AndroidNotificationChannel dailyReminderChannel =
@@ -88,7 +94,8 @@ class NotificationService {
 
     // Init timezone (needed for zonedSchedule)
     tz_data.initializeTimeZones();
-    final tzName = await FlutterTimezone.getLocalTimezone();
+    final tzInfo = await FlutterTimezone.getLocalTimezone();
+    final tzName = tzInfo.identifier;
     tz.setLocalLocation(tz.getLocation(tzName));
 
     // Check if user has a saved reminder and request permission proactively
@@ -301,11 +308,11 @@ class NotificationService {
 
     try {
       await _notifications.zonedSchedule(
-        0,
-        "📚 Time to Study!",
-        "Keep up your learning streak - let's practice now!",
-        scheduled,
-        details,
+        id: 0,
+        title: "📚 Time to Study!",
+        body: "Keep up your learning streak - let's practice now!",
+        scheduledDate: scheduled,
+        notificationDetails: details,
         androidScheduleMode: androidScheduleMode,
         matchDateTimeComponents: DateTimeComponents.time,
       );
@@ -378,11 +385,11 @@ class NotificationService {
 
     try {
       await _notifications.zonedSchedule(
-        0,
-        "📚 Time to Study!",
-        "Keep up your learning streak - let's practice now!",
-        scheduled,
-        details,
+        id: 0,
+        title: "📚 Time to Study!",
+        body: "Keep up your learning streak - let's practice now!",
+        scheduledDate: scheduled,
+        notificationDetails: details,
         androidScheduleMode: androidScheduleMode,
         matchDateTimeComponents: DateTimeComponents.time, // repeats daily
       );

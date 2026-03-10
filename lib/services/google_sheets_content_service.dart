@@ -57,6 +57,13 @@ class GoogleSheetsContentService {
     // Get Hive box
     _cacheBox = HiveService.gsheetsCacheBox;
     debugPrint('GoogleSheetsContentService: Hive box obtained, isOpen=${_cacheBox?.isOpen}');
+    
+    // DEBUG: Check what's in Hive before clearing
+    if (_cacheBox != null && _cacheBox!.isOpen) {
+      final existingTopics = _cacheBox!.get(_hiveTopics);
+      final existingSync = _cacheBox!.get(_hiveLastSync);
+      debugPrint('GoogleSheetsContentService: BEFORE INIT - Hive contains topics=${existingTopics != null}, syncTime=${existingSync != null}');
+    }
 
     _studyCache = {};
     _testCache = {};
@@ -87,7 +94,7 @@ class GoogleSheetsContentService {
           if (hasCache && _lastSyncTime == null) {
             _lastSyncTime = DateTime.now();
           }
-          debugPrint('GoogleSheetsContentService: Using cache, hasCache=$hasCache');
+          debugPrint('GoogleSheetsContentService: Using cache after fetch failure, hasCache=$hasCache');
           return false; // Using cache
         }
       } else {
@@ -95,20 +102,24 @@ class GoogleSheetsContentService {
         debugPrint('GoogleSheetsContentService: Offline mode, loading from Hive');
         final hasCache = await _loadFromLocalStorage();
         _isInitialized = true;
-        // If we have cached data but no sync time was restored, set it to now
-        // so the OFFLINE badge doesn't show for valid cached data
-        if (hasCache && _lastSyncTime == null) {
-          _lastSyncTime = DateTime.now();
+        // CRITICAL FIX: When we successfully load cache, ensure _lastSyncTime is set
+        // so the OFFLINE badge doesn't show. If no sync time in Hive, use current time.
+        if (hasCache) {
+          if (_lastSyncTime == null) {
+            _lastSyncTime = DateTime.now();
+            debugPrint('GoogleSheetsContentService: Set _lastSyncTime to now for loaded cache');
+          }
+          debugPrint('GoogleSheetsContentService: SUCCESS - Loaded ${getAvailableTopics().length} topics from cache, _lastSyncTime=$_lastSyncTime, isUsingCachedData=$isUsingCachedData');
+        } else {
+          debugPrint('GoogleSheetsContentService: FAILED - No cache available');
         }
-        debugPrint('GoogleSheetsContentService: Cache loaded: hasCache=$hasCache, topics=${_availableTopics?.length}, lastSyncTime=$_lastSyncTime');
-        return false; // Using cache
+        return false; // Using cache (or no data)
       }
     } catch (e) {
       // Error checking connectivity, try local storage
       debugPrint('GoogleSheetsContentService: Connectivity check error: $e');
       final hasCache = await _loadFromLocalStorage();
       _isInitialized = true;
-      // If we have cached data but no sync time was restored, set it to now
       if (hasCache && _lastSyncTime == null) {
         _lastSyncTime = DateTime.now();
       }
@@ -163,19 +174,47 @@ class GoogleSheetsContentService {
   }
 
   /// Fetch data from Google Sheets and save to Hive
-  /// SAFE: Clears existing data first, then saves fresh data
+  /// SAFE: Only clears and saves cache after successful fetch
   Future<void> _fetchAndCacheFromSheets() async {
     try {
-      // SAFETY: Clear existing data before fetching new data
+      // CRITICAL FIX: Don't clear cache until after successful fetch!
+      // Create temporary containers for new data
+      final tempStudyCache = <String, List<Question>>{};
+      final tempTestCache = <String, List<Question>>{};
+      final tempTopics = <String>{};
+      final tempLevels = <String, Set<String>>{};
+      final tempSubtopics = <String, Set<String>>{};
+
+      // Fetch Study sheet into temp containers
+      await _fetchSheetData(_studySheetId, isTest: false, 
+        studyCache: tempStudyCache, 
+        testCache: tempTestCache,
+        topics: tempTopics,
+        levels: tempLevels,
+        subtopics: tempSubtopics,
+      );
+      
+      // Fetch Test sheet (MCQs) into temp containers
+      await _fetchSheetData(_testSheetId, isTest: true,
+        studyCache: tempStudyCache, 
+        testCache: tempTestCache,
+        topics: tempTopics,
+        levels: tempLevels,
+        subtopics: tempSubtopics,
+      );
+      
+      // CRITICAL FIX: Only clear old cache AFTER successful fetch
       _clearAllCaches();
       if (_cacheBox != null && _cacheBox!.isOpen) {
         await _cacheBox!.clear();
       }
-
-      // Fetch Study sheet
-      await _fetchSheetData(_studySheetId, isTest: false);
-      // Fetch Test sheet (MCQs)
-      await _fetchSheetData(_testSheetId, isTest: true);
+      
+      // Now transfer temp data to actual caches
+      _studyCache = tempStudyCache;
+      _testCache = tempTestCache;
+      _availableTopics = tempTopics;
+      _availableLevelsPerTopic = tempLevels;
+      _availableSubtopicsPerCombo = tempSubtopics;
       
       // Save to Hive
       await _saveToLocalStorage();
@@ -188,7 +227,15 @@ class GoogleSheetsContentService {
   }
 
   /// Fetch data from a specific Google Sheet
-  Future<void> _fetchSheetData(String sheetId, {required bool isTest}) async {
+  Future<void> _fetchSheetData(
+    String sheetId, {
+    required bool isTest,
+    required Map<String, List<Question>> studyCache,
+    required Map<String, List<Question>> testCache,
+    required Set<String> topics,
+    required Map<String, Set<String>> levels,
+    required Map<String, Set<String>> subtopics,
+  }) async {
     final url = 'https://docs.google.com/spreadsheets/d/$sheetId/export?format=csv';
     
     debugPrint('GoogleSheetsContentService: Fetching sheet ${isTest ? "TEST" : "STUDY"} from $sheetId');
@@ -244,14 +291,14 @@ class GoogleSheetsContentService {
           continue;
         }
 
-        // Track available content
-        _availableTopics!.add(topic);
-        _availableLevelsPerTopic!.putIfAbsent(topic, () => {});
-        _availableLevelsPerTopic![topic]!.add(level);
+        // Track available content in temp containers
+        topics.add(topic);
+        levels.putIfAbsent(topic, () => {});
+        levels[topic]!.add(level);
         
         final comboKey = '${topic}_$level';
-        _availableSubtopicsPerCombo!.putIfAbsent(comboKey, () => {});
-        _availableSubtopicsPerCombo![comboKey]!.add(subtopic);
+        subtopics.putIfAbsent(comboKey, () => {});
+        subtopics[comboKey]!.add(subtopic);
 
         // Create question
         final question = _createQuestionFromMap(map, isTest: isTest);
@@ -261,7 +308,7 @@ class GoogleSheetsContentService {
         }
 
         final cacheKey = '${topic}_${level}_$subtopic';
-        final cache = isTest ? _testCache! : _studyCache!;
+        final cache = isTest ? testCache : studyCache;
         cache.putIfAbsent(cacheKey, () => []);
         cache[cacheKey]!.add(question);
         successCount++;
@@ -276,7 +323,7 @@ class GoogleSheetsContentService {
     }
     
     debugPrint('GoogleSheetsContentService: ${isTest ? "TEST" : "STUDY"} fetch complete - Success: $successCount, Skipped: $skipCount, Errors: $errorCount');
-    debugPrint('GoogleSheetsContentService: Topics found: ${_availableTopics?.length}, Test cache entries: ${_testCache?.length}, Study cache entries: ${_studyCache?.length}');
+    debugPrint('GoogleSheetsContentService: Topics found: ${topics.length}, Test cache entries: ${testCache.length}, Study cache entries: ${studyCache.length}');
   }
 
   /// Save current data to Hive (REPLACES existing data - no duplication)

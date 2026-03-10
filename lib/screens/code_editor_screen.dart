@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../utils/app_theme.dart';
 
@@ -404,6 +404,7 @@ button:hover {
       setState(() {
         _previewContent = content;
         _showPreview = true;
+        _initWebView();
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -897,14 +898,14 @@ button:hover {
       final tempFile = File('${tempDir.path}/preview.html');
       await tempFile.writeAsString(_previewContent);
 
-      // Use open_file_plus to open the HTML file in browser
+      // Use open_filex to open the HTML file in browser
       // This handles FileProvider automatically on Android
-      final result = await OpenFile.open(
+      final result = await OpenFilex.open(
         tempFile.path,
         type: 'text/html',
       );
 
-      if (result.type != ResultType.done && result.type != ResultType.fileNotFound) {
+      if (result.type != ResultType.done && result.type != ResultType.noAppToOpen) {
         debugPrint('Error opening file: ${result.message}');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

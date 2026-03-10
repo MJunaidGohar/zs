@@ -1418,18 +1418,25 @@ class _MainSelectionScreenState extends State<MainSelectionScreen>
 
                       const SizedBox(width: AppSpacing.sm),
 
-                      Text(
-
-                        '${AppLocalizations.of(context).consultation}: +92-307-776-319-5',
-
-                        style: theme.textTheme.labelSmall?.copyWith(
-
-                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-
-                          fontWeight: FontWeight.w500,
-
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: '${AppLocalizations.of(context).consultation}: ',
+                            ),
+                            TextSpan(
+                              text: '+92-307-776-319-5',
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ],
                         ),
-
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textDirection: TextDirection.ltr,
                       ),
 
                     ],

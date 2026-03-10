@@ -70,17 +70,148 @@ class BlockPiece {
 
 class PieceShapes {
   static final List<List<List<int>>> all = [
+    // Single block (1)
     [[1]],
+    // Domino (2)
     [[1, 1]],
+    // Trominoes (3)
     [[1, 1, 1]],
+    [[1, 1], [1, 0]],
     [[1, 0], [1, 1]],
+    // Tetrominoes (4)
     [[1, 1, 1, 1]],
     [[1, 1], [1, 1]],
     [[1, 1, 1], [0, 1, 0]],
-    [[1, 0, 0], [1, 1, 1]],
-    [[0, 0, 1], [1, 1, 1]],
+    [[1, 1, 1], [1, 0, 0]],
+    [[1, 1, 1], [0, 0, 1]],
     [[0, 1, 1], [1, 1, 0]],
     [[1, 1, 0], [0, 1, 1]],
+    [[1, 0, 0], [1, 1, 1]],
+    [[0, 0, 1], [1, 1, 1]],
+    [[1, 1], [0, 1], [0, 1]],
+    [[1, 1], [1, 0], [1, 0]],
+    [[1, 0], [1, 1], [0, 1]],
+    // Pentominoes (5)
+    [[1, 1, 1, 1, 1]],
+    [[1, 1, 1], [1, 1, 0]],
+    [[1, 1, 1], [0, 1, 1]],
+    [[1, 1, 1, 1], [0, 1, 0, 0]],
+    [[1, 1, 1, 1], [0, 0, 1, 0]],
+    [[1, 1, 0, 0], [0, 1, 1, 1]],
+    [[0, 0, 1, 1], [1, 1, 1, 0]],
+    [[0, 1, 1], [1, 1, 0], [1, 0, 0]],
+    [[1, 1, 0], [0, 1, 1], [0, 0, 1]],
+    [[1, 1, 1], [1, 0, 0], [1, 0, 0]],
+    [[1, 1, 1], [0, 0, 1], [0, 0, 1]],
+    [[1, 0, 0], [1, 0, 0], [1, 1, 1]],
+    [[0, 0, 1], [0, 0, 1], [1, 1, 1]],
+    [[1, 0], [1, 1], [1, 0], [1, 0]],
+    [[0, 1], [1, 1], [0, 1], [0, 1]],
+    // Cross shape (5)
+    [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+    // Hexominoes (6)
+    [[1, 1, 1], [1, 1, 1]],
+    [[1, 1, 1, 1, 1, 1]],
+    [[1, 1, 1, 1], [1, 1, 0, 0]],
+    [[1, 1, 1, 1], [0, 0, 1, 1]],
+    [[1, 0, 0], [1, 1, 1], [1, 0, 0]],
+    [[0, 0, 1], [1, 1, 1], [0, 0, 1]],
+    [[1, 1, 0], [0, 1, 1], [0, 1, 1]],
+    [[0, 1, 1], [1, 1, 0], [1, 1, 0]],
+    [[1, 1, 1], [1, 0, 0], [1, 1, 0]],
+    [[1, 1, 1], [0, 0, 1], [0, 1, 1]],
+    [[1, 0], [1, 1], [1, 1], [1, 0]],
+    [[0, 1], [1, 1], [1, 1], [0, 1]],
+    [[1, 0], [1, 0], [1, 1], [1, 1]],
+    [[0, 1], [0, 1], [1, 1], [1, 1]],
+    // Zigzag patterns
+    [[1, 1, 0], [0, 1, 1], [1, 1, 0]],
+    [[0, 1, 1], [1, 1, 0], [0, 1, 1]],
+    [[1, 1, 1], [0, 1, 0], [1, 1, 1]],
+    // Large T and L shapes
+    [[1, 1, 1, 1], [0, 1, 1, 0], [0, 1, 0, 0]],
+    [[0, 1, 0, 0], [1, 1, 1, 1], [0, 1, 1, 0]],
+    // Diamond / X shapes
+    [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+    [[1, 0, 1], [0, 1, 0], [1, 0, 1]],
+    // 2x3 rectangle
+    [[1, 1, 1], [1, 1, 1]],
+    // Stairs
+    [[1, 1, 0], [0, 1, 1], [0, 0, 1]],
+    [[0, 0, 1], [0, 1, 1], [1, 1, 0]],
+    [[1, 0, 0], [1, 1, 0], [0, 1, 1]],
+    [[0, 1, 1], [1, 1, 0], [1, 0, 0]],
+    // Heptominoes (7) - challenging shapes
+    [[1, 1, 1, 1, 1, 1, 1]],
+    [[1, 1, 1], [1, 1, 1], [1, 0, 0]],
+    [[1, 1, 1], [1, 1, 1], [0, 0, 1]],
+    [[1, 0, 0], [1, 1, 1], [1, 1, 1]],
+    [[0, 0, 1], [1, 1, 1], [1, 1, 1]],
+    [[1, 1, 1, 1], [1, 1, 1, 0]],
+    [[1, 1, 1, 1], [0, 1, 1, 1]],
+    [[1, 1, 1, 1], [0, 1, 0, 0], [0, 1, 0, 0]],
+    [[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 1, 0]],
+    // Large U shapes
+    [[1, 0, 0, 1], [1, 1, 1, 1]],
+    [[1, 1, 1, 1], [1, 0, 0, 1]],
+    [[1, 0, 1], [1, 0, 1], [1, 1, 1]],
+    [[1, 1, 1], [1, 0, 1], [1, 0, 1]],
+    // Plus/Cross variations
+    [[0, 0, 1, 0, 0], [0, 0, 1, 0, 0], [1, 1, 1, 1, 1], [0, 0, 1, 0, 0], [0, 0, 1, 0, 0]],
+    [[0, 1, 0], [1, 1, 1], [1, 1, 1], [0, 1, 0]],
+    // S-shapes
+    [[0, 1, 1, 1], [1, 1, 0, 0], [1, 0, 0, 0]],
+    [[1, 1, 1, 0], [0, 0, 1, 1], [0, 0, 0, 1]],
+    [[0, 0, 0, 1], [0, 0, 1, 1], [1, 1, 1, 0]],
+    [[1, 0, 0, 0], [1, 1, 0, 0], [0, 1, 1, 1]],
+    // W and M shapes
+    [[1, 0, 0], [1, 1, 0], [0, 1, 1], [0, 0, 1]],
+    [[0, 0, 1], [0, 1, 1], [1, 1, 0], [1, 0, 0]],
+    // P shape variations
+    [[1, 1, 1], [1, 0, 1], [1, 1, 0]],
+    [[1, 1, 1], [1, 0, 1], [0, 1, 1]],
+    // Y shapes
+    [[1, 0, 0], [1, 1, 0], [1, 0, 1], [1, 0, 0]],
+    [[0, 0, 1], [0, 1, 1], [1, 0, 1], [0, 0, 1]],
+    // Double T
+    [[1, 1, 1, 1, 1], [0, 0, 1, 0, 0], [0, 0, 1, 0, 0]],
+    // Frame/border shapes
+    [[1, 1, 1], [1, 0, 1], [1, 1, 1]],
+    [[1, 1, 1, 1], [1, 0, 0, 1], [1, 1, 1, 1]],
+    // Arrow shapes
+    [[0, 0, 1], [0, 1, 1], [1, 1, 1], [0, 1, 1], [0, 0, 1]],
+    [[1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 1, 0], [1, 0, 0]],
+    // Snake patterns
+    [[1, 1, 0, 0], [0, 1, 1, 0], [0, 0, 1, 1]],
+    [[0, 0, 1, 1], [0, 1, 1, 0], [1, 1, 0, 0]],
+    // Z shape large
+    [[1, 1, 0, 0], [0, 1, 0, 0], [0, 1, 1, 1]],
+    [[0, 0, 1, 1], [0, 0, 1, 0], [1, 1, 1, 0]],
+    // T-tetromino with extensions
+    [[1, 1, 1], [0, 1, 0], [0, 1, 0], [0, 1, 0]],
+    [[0, 1, 0], [0, 1, 0], [0, 1, 0], [1, 1, 1]],
+    // Corner brackets
+    [[1, 1, 1, 1], [1, 0, 0, 0], [1, 0, 0, 0]],
+    [[1, 1, 1, 1], [0, 0, 0, 1], [0, 0, 0, 1]],
+    [[1, 0, 0, 0], [1, 0, 0, 0], [1, 1, 1, 1]],
+    [[0, 0, 0, 1], [0, 0, 0, 1], [1, 1, 1, 1]],
+    // Double L
+    [[1, 0, 0], [1, 0, 0], [1, 1, 1], [1, 0, 0]],
+    [[0, 0, 1], [0, 0, 1], [1, 1, 1], [0, 0, 1]],
+    // Hook shapes
+    [[1, 1, 1, 1], [0, 0, 1, 1]],
+    [[1, 1, 1, 1], [1, 1, 0, 0]],
+    [[1, 1, 0, 0], [1, 1, 1, 1]],
+    [[0, 0, 1, 1], [1, 1, 1, 1]],
+    // C shape
+    [[1, 1, 1], [1, 0, 0], [1, 0, 0], [1, 1, 1]],
+    [[1, 1, 1], [0, 0, 1], [0, 0, 1], [1, 1, 1]],
+    // Step pyramid
+    [[0, 0, 1], [0, 1, 1], [1, 1, 1]],
+    [[1, 0, 0], [1, 1, 0], [1, 1, 1]],
+    // Bat/wing shapes
+    [[1, 0, 0, 0, 1], [1, 1, 1, 1, 1]],
+    [[1, 1, 1, 1, 1], [1, 0, 0, 0, 1]],
   ];
 
   static BlockPiece random(Random random, int colorIndex) {
@@ -90,6 +221,61 @@ class PieceShapes {
       colorIndex: colorIndex,
       id: DateTime.now().millisecondsSinceEpoch.toString(),
     );
+  }
+
+  // Generate diverse pieces ensuring variety in shape and size
+  static List<BlockPiece> generateDiverseSet(Random random, int count, int colorCount) {
+    final pieces = <BlockPiece>[];
+    final usedIndices = <int>{};
+    
+    // Define shape categories by block count
+    final Map<int, List<int>> sizeCategories = {};
+    for (int i = 0; i < all.length; i++) {
+      final size = all[i].fold<int>(0, (sum, row) => sum + row.fold(0, (s, c) => s + c));
+      sizeCategories.putIfAbsent(size, () => []).add(i);
+    }
+    
+    final availableSizes = sizeCategories.keys.toList()..sort();
+    
+    for (int i = 0; i < count; i++) {
+      int shapeIndex;
+      int attempts = 0;
+      
+      do {
+        // Pick a random size category with preference for smaller pieces
+        final sizeWeights = availableSizes.map((size) {
+          final weight = size <= 4 ? 3 : size <= 6 ? 2 : 1;
+          return MapEntry(size, weight);
+        }).toList();
+        
+        final totalWeight = sizeWeights.fold(0, (sum, e) => sum + e.value);
+        var targetWeight = random.nextInt(totalWeight);
+        var selectedSize = availableSizes.first;
+        
+        for (final entry in sizeWeights) {
+          targetWeight -= entry.value;
+          if (targetWeight < 0) {
+            selectedSize = entry.key;
+            break;
+          }
+        }
+        
+        final candidates = sizeCategories[selectedSize]!;
+        shapeIndex = candidates[random.nextInt(candidates.length)];
+        attempts++;
+      } while (usedIndices.contains(shapeIndex) && attempts < 10);
+      
+      usedIndices.add(shapeIndex);
+      final colorIndex = random.nextInt(colorCount);
+      
+      pieces.add(BlockPiece(
+        shape: all[shapeIndex],
+        colorIndex: colorIndex,
+        id: '${DateTime.now().millisecondsSinceEpoch}_$i',
+      ));
+    }
+    
+    return pieces;
   }
 }
 
@@ -119,25 +305,25 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   bool _isValidPlacement = false;
 
   final List<Color> _fruitColors = [
-    const Color(0xFFFF6B6B),
-    const Color(0xFFFFE66D),
-    const Color(0xFF9B59B6),
-    const Color(0xFFFF8C42),
-    const Color(0xFFFF1744),
-    const Color(0xFF00BCD4),
-    const Color(0xFFFFA07A),
-    const Color(0xFFC0392B),
+    const Color(0xFFFF3366), // Hot Pink
+    const Color(0xFF00E5FF), // Cyan
+    const Color(0xFF76FF03), // Lime Green
+    const Color(0xFFFFD600), // Bright Yellow
+    const Color(0xFFFF3D00), // Deep Orange
+    const Color(0xFF7C4DFF), // Purple
+    const Color(0xFFFF1744), // Red
+    const Color(0xFF18FFFF), // Aqua
   ];
 
   final List<Color> _socialColors = [
-    const Color(0xFFFFD700),
-    const Color(0xFFE91E63),
-    const Color(0xFFFF5722),
-    const Color(0xFF9C27B0),
-    const Color(0xFFFF4081),
-    const Color(0xFF4CAF50),
-    const Color(0xFF2196F3),
-    const Color(0xFF607D8B),
+    const Color(0xFF2979FF), // Bright Blue
+    const Color(0xFFFF4081), // Pink
+    const Color(0xFF00E676), // Green
+    const Color(0xFFFF9100), // Orange
+    const Color(0xFFE040FB), // Magenta
+    const Color(0xFF00B0FF), // Light Blue
+    const Color(0xFFFF5252), // Coral Red
+    const Color(0xFF64FFDA), // Teal
   ];
 
   List<Color> get blockColors => _currentTheme == 'fruits' ? _fruitColors : _socialColors;
@@ -169,7 +355,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late final AnimationController _tutorialController;
   late final AnimationController _handSwipeController;
 
-  final VolumeController _volumeController = VolumeController();
+  final VolumeController _volumeController = VolumeController.instance;
   double _currentVolume = 0.5;
   StreamSubscription<double>? _volumeListener;
 
@@ -390,7 +576,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       });
     });
 
-    _volumeListener = _volumeController.listener((volume) {
+    _volumeListener = _volumeController.addListener((volume) {
       setState(() {
         _currentVolume = volume;
       });
@@ -596,12 +782,27 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   void _generateNewPieces() {
+    // Count how many pieces need to be generated
+    int emptySlots = 0;
+    final emptyIndices = <int>[];
     for (int i = 0; i < 3; i++) {
       if (_availablePieces[i] == null) {
-        _availablePieces[i] = PieceShapes.random(_random, _random.nextInt(blockColors.length));
-        _pieceBounceControllers[i].forward(from: 0);
+        emptySlots++;
+        emptyIndices.add(i);
       }
     }
+    
+    if (emptySlots > 0) {
+      // Generate diverse pieces for all empty slots at once
+      final newPieces = PieceShapes.generateDiverseSet(_random, emptySlots, blockColors.length);
+      
+      for (int i = 0; i < emptySlots; i++) {
+        final slotIndex = emptyIndices[i];
+        _availablePieces[slotIndex] = newPieces[i];
+        _pieceBounceControllers[slotIndex].forward(from: 0);
+      }
+    }
+    
     if (!_hasAnyValidMoves()) {
       _triggerGameOver();
     }
@@ -847,38 +1048,56 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     final l10n = AppLocalizations.of(context);
     final size = MediaQuery.of(context).size;
     final isSmallScreen = size.width < 360;
-
-    final gridPadding = 8.0;
-    final availableWidth = size.width - (gridPadding * 2);
-    final cellSize = (availableWidth / gridSize).floorToDouble();
+    final padding = MediaQuery.of(context).padding;
+    
+    // Minimal UI heights
+    final topBarHeight = 52.0;
+    final piecesHeight = isSmallScreen ? 65.0 : 75.0;
+    final safeTop = padding.top > 0 ? padding.top : 4.0;
+    final safeBottom = padding.bottom > 0 ? padding.bottom : 4.0;
+    
+    // Calculate available space for grid
+    final availableHeight = size.height - safeTop - safeBottom - topBarHeight - piecesHeight - 12;
+    final availableWidth = size.width - 8; // Minimal horizontal margin
+    
+    // Grid takes available space
+    final cellSizeFromWidth = (availableWidth / gridSize).floorToDouble();
+    final cellSizeFromHeight = (availableHeight / gridSize).floorToDouble();
+    final cellSize = min(cellSizeFromWidth, cellSizeFromHeight);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1117),
-      body: SafeArea(
+      body: Padding(
+        padding: EdgeInsets.only(top: safeTop, bottom: safeBottom, left: 4, right: 4),
         child: Column(
           children: [
-            _buildTopBar(l10n, isSmallScreen),
+            SizedBox(
+              height: topBarHeight,
+              child: _buildTopRow(l10n, isSmallScreen),
+            ),
             const SizedBox(height: 4),
-            _buildScoreBar(l10n),
-            const SizedBox(height: 8),
             Expanded(
               child: Center(
-                child: _buildGameGrid(cellSize, gridPadding),
+                child: _buildGameGrid(cellSize, 0),
               ),
             ),
-            _buildPiecesArea(l10n, isSmallScreen),
+            SizedBox(
+              height: piecesHeight,
+              child: _buildPiecesArea(l10n, isSmallScreen),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTopBar(AppLocalizations? l10n, bool isSmallScreen) {
+  Widget _buildTopRow(AppLocalizations? l10n, bool isSmallScreen) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          Expanded(child: _buildScoreBar(l10n)),
+          const SizedBox(width: 6),
           _buildMenuButton(),
         ],
       ),
@@ -887,9 +1106,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Widget _buildMenuButton() {
     return PopupMenuButton<String>(
-      icon: _GlassCard(
-        gradient: LinearGradient(
-          colors: [Colors.grey.shade600, Colors.grey.shade700],
+      icon: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1F2E),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: const Icon(
           Icons.more_vert,
@@ -965,149 +1187,113 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildScoreBar(AppLocalizations? l10n) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: _GlassCard(
-              gradient: LinearGradient(
-                colors: [Colors.amber.shade600, Colors.orange.shade600],
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    l10n?.score ?? "Score",
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.white.withAlpha(200),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  ValueListenableBuilder<int>(
-                    valueListenable: scoreNotifier,
-                    builder: (_, score, __) => Text(
-                      score.toString(),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+    return Row(
+      children: [
+        Expanded(
+          flex: 2,
+          child: Container(
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1F2E),
+              borderRadius: BorderRadius.circular(6),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _GlassCard(
-              gradient: LinearGradient(
-                colors: [Colors.purple.shade500, Colors.deepPurple.shade500],
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    "Best",
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.white.withAlpha(200),
-                      fontWeight: FontWeight.w500,
-                    ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  l10n?.score ?? "Score",
+                  style: const TextStyle(
+                    fontSize: 9,
+                    color: Color(0xFF8B92A8),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _highScore.toString(),
+                ),
+                ValueListenableBuilder<int>(
+                  valueListenable: scoreNotifier,
+                  builder: (_, score, __) => Text(
+                    score.toString(),
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _GlassCard(
-              gradient: LinearGradient(
-                colors: _combo > 0
-                    ? [Colors.pink.shade500, Colors.red.shade500]
-                    : [Colors.teal.shade500, Colors.cyan.shade500],
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    l10n?.combo ?? "Combo",
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.white.withAlpha(200),
-                      fontWeight: FontWeight.w500,
-                    ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Container(
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1F2E),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  "Best",
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: Color(0xFF8B92A8),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "x$_combo",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: _combo > 0 ? Colors.yellowAccent : Colors.white,
-                    ),
+                ),
+                Text(
+                  _highScore.toString(),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _GlassCard(
-              gradient: LinearGradient(
-                colors: [Colors.green.shade500, Colors.lightGreen.shade500],
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    "Lines",
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.white.withAlpha(200),
-                      fontWeight: FontWeight.w500,
-                    ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Container(
+            height: 40,
+            decoration: BoxDecoration(
+              color: _combo > 0 ? const Color(0xFF2D1B1B) : const Color(0xFF1A1F2E),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  "Combo",
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: Color(0xFF8B92A8),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _linesCleared.toString(),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                ),
+                Text(
+                  "x$_combo",
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: _combo > 0 ? Colors.amber : Colors.white,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildGameGrid(double cellSize, double padding) {
     return Container(
-      margin: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: const Color(0xFF161922),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.white.withAlpha(20),
-          width: 1,
-        ),
+        color: const Color(0xFF13161F),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(11),
+        borderRadius: BorderRadius.circular(8),
         child: Stack(
           children: [
             Column(
@@ -1171,36 +1357,23 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
 
     Widget cellWidget = Container(
-      width: cellSize,
-      height: cellSize,
+      width: cellSize - 1,
+      height: cellSize - 1,
       margin: const EdgeInsets.all(0.5),
       decoration: BoxDecoration(
         color: colorIndex != null
             ? blockColors[colorIndex % blockColors.length]
             : isPreview
                 ? isValidPreview
-                    ? Colors.green.withAlpha(80)
-                    : Colors.red.withAlpha(60)
-                : const Color(0xFF1A1F2E),
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(
-          color: colorIndex != null
-              ? Colors.white.withAlpha(60)
-              : isPreview
-                  ? isValidPreview
-                      ? Colors.green.withAlpha(180)
-                      : Colors.red.withAlpha(120)
-                  : Colors.white.withAlpha(8),
-          width: colorIndex != null ? 1 : 0.5,
-        ),
-        boxShadow: colorIndex != null
-            ? [
-                BoxShadow(
-                  color: blockColors[colorIndex % blockColors.length].withAlpha(100),
-                  blurRadius: 4,
-                  spreadRadius: 0,
-                ),
-              ]
+                    ? Colors.green.withAlpha(120)
+                    : Colors.red.withAlpha(80)
+                : const Color(0xFF1C2130),
+        borderRadius: BorderRadius.circular(2),
+        border: isPreview
+            ? Border.all(
+                color: isValidPreview ? Colors.green : Colors.red,
+                width: 1.5,
+              )
             : null,
       ),
       child: colorIndex != null
@@ -1209,7 +1382,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   ? _buildFruitIcon(colorIndex, cellSize * 0.5)
                   : _buildEmojiIcon(colorIndex, cellSize * 0.5),
             )
-          : null,
+          : isPreview
+              ? Center(
+                  child: Container(
+                    width: cellSize * 0.3,
+                    height: cellSize * 0.3,
+                    decoration: BoxDecoration(
+                      color: isValidPreview ? Colors.green : Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                )
+              : null,
     );
 
     if (isClearing) {
@@ -1249,98 +1433,64 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildPiecesArea(AppLocalizations? l10n, bool isSmallScreen) {
+    final pieceSize = isSmallScreen ? 50.0 : 60.0;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        border: Border.all(
-          color: Colors.white.withAlpha(15),
-          width: 0.5,
-        ),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: List.generate(3, (index) {
-          return _buildDraggablePiece(index, isSmallScreen);
+          return _buildDraggablePiece(index, pieceSize);
         }),
       ),
     );
   }
 
-  Widget _buildDraggablePiece(int index, bool isSmallScreen) {
+  Widget _buildDraggablePiece(int index, double containerSize) {
     final piece = _availablePieces[index];
-    final containerSize = isSmallScreen ? 55.0 : 70.0;
+    final cellSize = containerSize / 4;
 
     if (piece == null) {
-      return Container(
+      return SizedBox(width: containerSize, height: containerSize);
+    }
+
+    Widget pieceContent = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(piece.height, (r) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(piece.width, (c) {
+            if (piece.shape[r][c] == 0) {
+              return SizedBox(width: cellSize, height: cellSize);
+            }
+            return Container(
+              width: cellSize - 2,
+              height: cellSize - 2,
+              margin: const EdgeInsets.all(1),
+              decoration: BoxDecoration(
+                color: blockColors[piece.colorIndex],
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Center(
+                child: _currentTheme == 'fruits'
+                    ? _buildFruitIcon(piece.colorIndex, cellSize * 0.35)
+                    : _buildEmojiIcon(piece.colorIndex, cellSize * 0.35),
+              ),
+            );
+          }),
+        );
+      }),
+    );
+
+    Widget pieceWidget = GestureDetector(
+      onTap: () => _rotatePiece(index),
+      child: Container(
         width: containerSize,
         height: containerSize,
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(5),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Colors.white.withAlpha(10),
-            width: 0.5,
-          ),
+          color: const Color(0xFF1A1F2E),
+          borderRadius: BorderRadius.circular(6),
         ),
-      );
-    }
-
-    final cellSize = containerSize / 4;
-
-    Widget pieceWidget = AnimatedBuilder(
-      animation: _pieceBounceControllers[index],
-      builder: (context, child) {
-        final bounce = 1.0 + (_pieceBounceControllers[index].value * 0.03);
-        return Transform.scale(
-          scale: bounce,
-          child: child,
-        );
-      },
-      child: GestureDetector(
-        onTap: () => _rotatePiece(index),
-        child: Container(
-          width: containerSize,
-          height: containerSize,
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1F2E),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: blockColors[piece.colorIndex].withAlpha(100),
-              width: 1,
-            ),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(piece.height, (r) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(piece.width, (c) {
-                    if (piece.shape[r][c] == 0) {
-                      return SizedBox(width: cellSize, height: cellSize);
-                    }
-                    return Container(
-                      width: cellSize - 1,
-                      height: cellSize - 1,
-                      margin: const EdgeInsets.all(0.5),
-                      decoration: BoxDecoration(
-                        color: blockColors[piece.colorIndex],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      child: Center(
-                        child: _currentTheme == 'fruits'
-                            ? _buildFruitIcon(piece.colorIndex, cellSize * 0.35)
-                            : _buildEmojiIcon(piece.colorIndex, cellSize * 0.35),
-                      ),
-                    );
-                  }),
-                );
-              }),
-            ),
-          ),
-        ),
+        child: Center(child: pieceContent),
       ),
     );
 
@@ -1348,23 +1498,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       data: piece,
       feedback: Material(
         color: Colors.transparent,
-        child: Container(
-          width: containerSize * 1.2,
-          height: containerSize * 1.2,
-          decoration: BoxDecoration(
-            color: blockColors[piece.colorIndex].withAlpha(40),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Center(
-            child: Transform.scale(
-              scale: 1.1,
-              child: pieceWidget,
-            ),
-          ),
+        child: Transform.scale(
+          scale: 1.2,
+          child: _buildPieceBlocksOnly(piece, cellSize),
         ),
       ),
       childWhenDragging: Opacity(
-        opacity: 0.2,
+        opacity: 0.1,
         child: pieceWidget,
       ),
       onDragStarted: () => _onPieceDragStart(piece, index),
@@ -1383,6 +1523,36 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         });
       },
       child: pieceWidget,
+    );
+  }
+
+  Widget _buildPieceBlocksOnly(BlockPiece piece, double cellSize) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(piece.height, (r) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(piece.width, (c) {
+            if (piece.shape[r][c] == 0) {
+              return SizedBox(width: cellSize, height: cellSize);
+            }
+            return Container(
+              width: cellSize - 2,
+              height: cellSize - 2,
+              margin: const EdgeInsets.all(1),
+              decoration: BoxDecoration(
+                color: blockColors[piece.colorIndex],
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Center(
+                child: _currentTheme == 'fruits'
+                    ? _buildFruitIcon(piece.colorIndex, cellSize * 0.4)
+                    : _buildEmojiIcon(piece.colorIndex, cellSize * 0.4),
+              ),
+            );
+          }),
+        );
+      }),
     );
   }
 

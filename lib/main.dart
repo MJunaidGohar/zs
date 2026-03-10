@@ -5,7 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart' show FlutterQuillLocalizations;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
+// import 'package:google_fonts/google_fonts.dart';  // DISABLED - Using local font instead
 import 'dart:io';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -33,6 +33,9 @@ import 'screens/main_selection_screen.dart';
 import 'screens/avatar_selection_screen.dart';
 import 'screens/profile_screen.dart';
 
+// Widgets
+import 'widgets/animated_splash_screen.dart';
+
 // Theme
 import 'utils/app_theme.dart';
 
@@ -47,9 +50,6 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-
-  // Enable fullscreen immersive mode to hide system navigation buttons
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
   // Initialize Hive
   await Hive.initFlutter();
@@ -122,7 +122,7 @@ class MyApp extends StatelessWidget {
     final userProvider = Provider.of<UserProvider>(context);
     final languageProvider = Provider.of<LanguageProvider>(context);
 
-    // Loading state
+    // Loading state - show animated splash screen
     if (userProvider.isLoading || languageProvider.isLoading) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -137,11 +137,7 @@ class MyApp extends StatelessWidget {
           FlutterQuillLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        ),
+        home: const AnimatedSplashScreen(),
       );
     }
 
@@ -205,9 +201,7 @@ class MyApp extends StatelessWidget {
     
     // Use Noto Nastaliq Urdu for Urdu language, default font otherwise
     final textTheme = isUrdu
-        ? GoogleFonts.notoNastaliqUrduTextTheme(
-            ThemeData.light().textTheme,
-          )
+        ? _buildUrduTextTheme(ThemeData.light().textTheme)
         : const TextTheme(
             displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight, letterSpacing: -0.5),
             displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight, letterSpacing: -0.5),
@@ -402,6 +396,28 @@ class MyApp extends StatelessWidget {
     );
   }
 
+  /// Build Urdu text theme using locally bundled Noto Nastaliq Urdu font
+  TextTheme _buildUrduTextTheme(TextTheme base) {
+    const urduFontFamily = 'NotoNastaliqUrdu';
+    return base.copyWith(
+      displayLarge: base.displayLarge?.copyWith(fontFamily: urduFontFamily, fontSize: 28, height: 1.6),
+      displayMedium: base.displayMedium?.copyWith(fontFamily: urduFontFamily, fontSize: 24, height: 1.6),
+      displaySmall: base.displaySmall?.copyWith(fontFamily: urduFontFamily, fontSize: 20, height: 1.6),
+      headlineLarge: base.headlineLarge?.copyWith(fontFamily: urduFontFamily, fontSize: 20, height: 1.6),
+      headlineMedium: base.headlineMedium?.copyWith(fontFamily: urduFontFamily, fontSize: 18, height: 1.6),
+      headlineSmall: base.headlineSmall?.copyWith(fontFamily: urduFontFamily, fontSize: 16, height: 1.6),
+      titleLarge: base.titleLarge?.copyWith(fontFamily: urduFontFamily, fontSize: 16, height: 1.6),
+      titleMedium: base.titleMedium?.copyWith(fontFamily: urduFontFamily, fontSize: 14, height: 1.6),
+      titleSmall: base.titleSmall?.copyWith(fontFamily: urduFontFamily, fontSize: 12, height: 1.6),
+      bodyLarge: base.bodyLarge?.copyWith(fontFamily: urduFontFamily, fontSize: 14, height: 1.8),
+      bodyMedium: base.bodyMedium?.copyWith(fontFamily: urduFontFamily, fontSize: 12, height: 1.8),
+      bodySmall: base.bodySmall?.copyWith(fontFamily: urduFontFamily, fontSize: 10, height: 1.8),
+      labelLarge: base.labelLarge?.copyWith(fontFamily: urduFontFamily, fontSize: 12, height: 1.6),
+      labelMedium: base.labelMedium?.copyWith(fontFamily: urduFontFamily, fontSize: 10, height: 1.6),
+      labelSmall: base.labelSmall?.copyWith(fontFamily: urduFontFamily, fontSize: 9, height: 1.6),
+    );
+  }
+
   /// Build Dark Theme with optional Urdu font support
   ThemeData _buildDarkTheme(BuildContext context) {
     final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
@@ -409,13 +425,11 @@ class MyApp extends StatelessWidget {
     
     // Use Noto Nastaliq Urdu for Urdu language, default font otherwise
     final textTheme = isUrdu
-        ? GoogleFonts.notoNastaliqUrduTextTheme(
-            ThemeData.dark().textTheme.copyWith(
+        ? _buildUrduTextTheme(ThemeData.dark().textTheme.copyWith(
               bodyLarge: const TextStyle(color: AppColors.textPrimaryDark),
               bodyMedium: const TextStyle(color: AppColors.textSecondaryDark),
               bodySmall: const TextStyle(color: AppColors.textTertiaryDark),
-            ),
-          )
+            ))
         : const TextTheme(
             displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimaryDark, letterSpacing: -0.5),
             displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimaryDark, letterSpacing: -0.5),

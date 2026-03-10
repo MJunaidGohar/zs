@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:volume_controller/volume_controller.dart';
 import '../models/question.dart';
 import '../services/google_sheets_content_service.dart';
 import '../utils/app_theme.dart';
@@ -23,6 +26,22 @@ class CertificateTestScreen extends StatefulWidget {
 class _CertificateTestScreenState extends State<CertificateTestScreen> {
   final GoogleSheetsContentService _sheetsService = GoogleSheetsContentService();
   
+  // Audio
+  AudioPlayer? _audioPlayer;
+  bool _isMusicPlaying = false;
+  bool _isMusicEnabled = true;
+  final VolumeController _volumeController = VolumeController.instance;
+  double _currentVolume = 0.5;
+  StreamSubscription<double>? _volumeListener;
+  StreamSubscription<void>? _audioCompleteListener;
+  
+  // Default background music playlist (plays sequentially then loops)
+  static const List<String> _defaultAudioFiles = [
+    'audio/zs_certificat_test_music.mp3',
+    'audio/zs_certificat_test_music_.mp3',
+  ];
+  int _currentAudioIndex = 0;
+  
   List<Question> _questions = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -39,6 +58,129 @@ class _CertificateTestScreenState extends State<CertificateTestScreen> {
   void initState() {
     super.initState();
     _loadQuestions();
+    _initAudioPlayer();
+    _initVolumeController();
+  }
+
+  /// Get file name from path
+  String _getFileName(String path) {
+    return path.split('/').last;
+  }
+
+  /// Initialize volume controller for hardware volume buttons
+  void _initVolumeController() {
+    _volumeController.getVolume().then((volume) {
+      if (mounted) {
+        setState(() {
+          _currentVolume = volume;
+        });
+      }
+    });
+
+    _volumeListener = _volumeController.addListener((volume) {
+      if (mounted) {
+        setState(() {
+          _currentVolume = volume;
+        });
+      }
+
+      if (_audioPlayer != null && _isMusicEnabled) {
+        _audioPlayer!.setVolume(volume);
+      }
+    });
+  }
+
+  /// Initialize audio player with sequential playlist support
+  Future<void> _initAudioPlayer() async {
+    try {
+      _audioPlayer = AudioPlayer();
+      
+      // Listen for track completion to play next song
+      _audioCompleteListener = _audioPlayer!.onPlayerComplete.listen((_) {
+        _playNextTrack();
+      });
+      
+      // Small delay to ensure audio context is ready
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      if (mounted) {
+        await _playBackgroundMusic();
+      }
+    } catch (e) {
+      debugPrint('Audio player initialization error: $e');
+    }
+  }
+
+  /// Play next track in sequence (loops back to first after last)
+  void _playNextTrack() {
+    if (!_isMusicEnabled || _audioPlayer == null) return;
+    
+    // Move to next default track
+    setState(() {
+      _currentAudioIndex = (_currentAudioIndex + 1) % _defaultAudioFiles.length;
+    });
+    _playBackgroundMusic();
+  }
+
+  /// Play background music
+  Future<void> _playBackgroundMusic() async {
+    if (_audioPlayer == null || !_isMusicEnabled) return;
+
+    try {
+      // Play default asset files sequentially
+      final currentTrack = _defaultAudioFiles[_currentAudioIndex];
+      debugPrint('Playing audio track: $currentTrack');
+      
+      // Set volume before playing
+      await _audioPlayer!.setVolume(_currentVolume * 0.7); // 70% of system volume
+      
+      // Play the asset
+      await _audioPlayer!.play(AssetSource(currentTrack));
+      _isMusicPlaying = true;
+      debugPrint('Audio playback started successfully');
+    } catch (e) {
+      debugPrint('Background music playback error: $e');
+    }
+  }
+
+  /// Toggle music on/off
+  Future<void> _toggleMusic() async {
+    setState(() {
+      _isMusicEnabled = !_isMusicEnabled;
+    });
+
+    if (_isMusicEnabled) {
+      await _playBackgroundMusic();
+    } else {
+      await _stopBackgroundMusic();
+    }
+  }
+
+  /// Stop background music
+  Future<void> _stopBackgroundMusic() async {
+    if (_audioPlayer == null) return;
+
+    try {
+      await _audioPlayer!.stop();
+      _isMusicPlaying = false;
+    } catch (e) {
+      debugPrint('Stop music error: $e');
+    }
+  }
+
+  /// Stop and dispose audio player
+  Future<void> _disposeAudioPlayer() async {
+    if (_audioPlayer == null) return;
+
+    try {
+      _audioCompleteListener?.cancel();
+      await _audioPlayer!.stop();
+      await _audioPlayer!.dispose();
+      _audioPlayer = null;
+      _isMusicPlaying = false;
+    } catch (e) {
+      debugPrint('Dispose audio player error: $e');
+    }
   }
 
   Future<void> _loadQuestions() async {
@@ -100,6 +242,17 @@ class _CertificateTestScreenState extends State<CertificateTestScreen> {
               ),
           ],
         ),
+        actions: [
+          // Music toggle button
+          IconButton(
+            icon: Icon(
+              _isMusicEnabled ? Icons.queue_music : Icons.music_off,
+              color: _isMusicEnabled ? Colors.white : Colors.white54,
+            ),
+            onPressed: _toggleMusic,
+            tooltip: _isMusicEnabled ? 'Mute Music' : 'Unmute Music',
+          ),
+        ],
         centerTitle: true,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -449,6 +602,7 @@ class _CertificateTestScreenState extends State<CertificateTestScreen> {
   }
 
   void _navigateToResult() {
+    _disposeAudioPlayer(); // Stop music when navigating to results
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -495,6 +649,7 @@ class _CertificateTestScreenState extends State<CertificateTestScreen> {
           ),
           ElevatedButton(
             onPressed: () {
+              _disposeAudioPlayer(); // Stop music when exiting
               Navigator.pop(context);
               Navigator.pop(context);
             },
@@ -507,5 +662,13 @@ class _CertificateTestScreenState extends State<CertificateTestScreen> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _audioCompleteListener?.cancel();
+    _volumeController.removeListener();
+    _disposeAudioPlayer();
+    super.dispose();
   }
 }
